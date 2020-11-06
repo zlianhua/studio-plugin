@@ -1,5 +1,6 @@
 package com.ai.abc.studio.plugin.action;
 
+import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
@@ -17,6 +18,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.file.impl.FileManagerImpl;
 import com.intellij.util.ResourceUtil;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.util.StringUtils;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -48,14 +50,18 @@ public class NewSingleRootEntityAction extends AnAction {
         newSingleEntityDialog.getIsAbstractCheckBox().setEnabled(false);
         newSingleEntityDialog.getIsOneToManyCheckBox().setEnabled(false);
         if (newSingleEntityDialog.showAndGet()) {
-            EntityDefinition entity = new EntityDefinition();
-            entity.setSimpleName(newSingleEntityDialog.getNameTextField().getText());
-            entity.setDescription(newSingleEntityDialog.getDescTextField().getText());
-            entity.setRoot(newSingleEntityDialog.getIsRootCheckBox().isSelected());
-            entity.setValueObject(newSingleEntityDialog.getIsValueCheckBox().isSelected());
-            entity.setAbstract(newSingleEntityDialog.getIsAbstractCheckBox().isSelected());
+
             try {
                 Project project = e.getData(PlatformDataKeys.PROJECT);
+                EntityDefinition entity = new EntityDefinition();
+                String entitySimpleName = newSingleEntityDialog.getNameTextField().getText();
+                entity.setSimpleName(entitySimpleName);
+                ComponentDefinition component = FileCreateHelper.loadComponent(project);
+                entity.setName(component.getName().toLowerCase() +".model."+entitySimpleName);
+                entity.setDescription(newSingleEntityDialog.getDescTextField().getText());
+                entity.setRoot(newSingleEntityDialog.getIsRootCheckBox().isSelected());
+                entity.setValueObject(newSingleEntityDialog.getIsValueCheckBox().isSelected());
+                entity.setAbstract(newSingleEntityDialog.getIsAbstractCheckBox().isSelected());
                 String fileName = FileCreateHelper.createEntityCode(project,entity);
                 Path path = Paths.get(fileName);
                 VirtualFile virtualFile = VfsUtil.findFile(path,true);

@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileCreateHelper {
     public static String createMainPom(ComponentDefinition component) throws Exception{
@@ -167,36 +169,6 @@ public class FileCreateHelper {
         Files.write(filePath,restPom.content);
     }
 
-    public static String createRepositoryCode(Project project,String entityName) throws Exception{
-        ComponentDefinition component = loadComponent(project);
-        StringBuilder repositoryPath =getPackagePath(component)
-                .append(File.separator)
-                .append(component.getSimpleName().toLowerCase())
-                .append("-service/repository".toLowerCase());
-        File rest = new File(repositoryPath.toString());
-        if(!rest.exists()){
-            rest.mkdirs();
-        }
-        StringBuilder restSrcPkgPath = componentSrcPkg(component,repositoryPath)
-                .append(File.separator)
-                .append("service.repository");
-        File restSrcPkg = new File(restSrcPkgPath.toString());
-        if(!restSrcPkg.exists()){
-            restSrcPkg.mkdirs();
-        }
-        EntityDefinition entity = EntityUtil.findEntityBySimpleNameInComponent(component,entityName);
-        MemoryFile repositoryCode = ComponentVmUtil.createRepositoryCode(component,entity);
-        StringBuilder fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(repositoryCode.fileName);
-        Path filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,repositoryCode.content);
-        return fileName.toString();
-    }
-
     public static void createRestProxyModule(ComponentDefinition component) throws Exception{
         StringBuilder restPath =getPackagePath(component)
                 .append(File.separator)
@@ -318,6 +290,166 @@ public class FileCreateHelper {
         Files.write(filePath,entityCode.content);
         component.getEntities().add(entity);
         saveMetaData(component);
+        //生成接口、服务、rest和rest Proxy
+        if(entity.isRoot()){
+            createInterfaceRelCodes(component,entity);
+        }
         return filePath.toString();
+    }
+
+    private static void createInterfaceRelCodes(ComponentDefinition component,EntityDefinition rootEntity) throws Exception{
+        List<EntityDefinition> entities = new ArrayList<>();
+        entities.add(rootEntity);
+        //repository
+        MemoryFile repositoryCode = ComponentVmUtil.createRepositoryCode(component,rootEntity);
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(repositoryCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,repositoryCode.content);
+        //command api
+        MemoryFile apiCode = ComponentVmUtil.createApiCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(apiCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,apiCode.content);
+        //query api
+        MemoryFile queryApiCode = ComponentVmUtil.createQueryApiCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(queryApiCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryApiCode.content);
+        //service
+        MemoryFile serviceCode = ComponentVmUtil.createServiceCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(serviceCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,serviceCode.content);
+        //queryService
+        MemoryFile queryServiceCode = ComponentVmUtil.createQueryServiceCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(queryServiceCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryServiceCode.content);
+        //service test
+        //service test code
+        MemoryFile testServiceCode = ComponentVmUtil.createTestCode(component,rootEntity,entities);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testServiceCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testServiceCode.content);
+        //service test app java
+        MemoryFile testServiceAppCode = ComponentVmUtil.createAppCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testServiceAppCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testServiceAppCode.content);
+        //service test app properties
+        MemoryFile testServiceAppFileMainCode = ComponentVmUtil.createApplicationFile(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testServiceAppFileMainCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testServiceAppFileMainCode.content);
+        //rest
+        MemoryFile restCode = ComponentVmUtil.createRestCode(component,entities,entities);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(restCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restCode.content);
+        //rest test code
+        MemoryFile testRestCode = ComponentVmUtil.createRestTestCode(component,entities);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testRestCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testRestCode.content);
+        //rest test app java
+        MemoryFile testRestAppCode = ComponentVmUtil.createRestAppCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testRestAppCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testRestAppCode.content);
+        //rest test app properties
+        MemoryFile testRestAppFileCode = ComponentVmUtil.createRestApplicationFile(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(testRestAppFileCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,testRestAppFileCode.content);
+        //rest proxy
+        MemoryFile restProxyCode = ComponentVmUtil.createRestProxyCode(component,rootEntity,entities);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(restProxyCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restProxyCode.content);
+        //query rest proxy
+        MemoryFile queryRestProxyCode = ComponentVmUtil.createQueryRestProxyCode(component,rootEntity);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(queryRestProxyCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryRestProxyCode.content);
+        //rest configration
+        MemoryFile restConfigCode = ComponentVmUtil.createRestConfigrationCode(component,entities,entities);
+        fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(restConfigCode.fileName);
+        filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restConfigCode.content);
     }
 }
