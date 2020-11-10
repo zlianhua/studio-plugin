@@ -1,6 +1,7 @@
 package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
+import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
 import com.intellij.openapi.actionSystem.*;
 import com.ai.abc.studio.plugin.dialog.*;
@@ -25,6 +26,11 @@ public class NewComponentAction extends AnAction {
             component.setLogicalDelete(componentDialog.getIsLogicalDeleteCheckBox().isSelected());
             component.setExtendsAbstractEntity(componentDialog.getIsExtendBaseEntityCheckBox().isSelected());
             component.setAuditable(componentDialog.getIsAuditableCheckBox().isSelected());
+            DBConnectProp dbConnectProp = new DBConnectProp();
+            dbConnectProp.setDbUrl(componentDialog.getDbUrlTextField().getText());
+            dbConnectProp.setDbUserName(componentDialog.getDbUserTextField().getText());
+            dbConnectProp.setDbPassword(componentDialog.getDbPasswordTextField().getText());
+            component.setDbConnectProp(dbConnectProp);
             try {
                 FileCreateHelper.createAbcDirectory(component);
                 FileCreateHelper.createMainPom(component);

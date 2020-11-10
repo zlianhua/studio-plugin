@@ -1,5 +1,7 @@
 package com.ai.abc.studio.plugin.dialog;
 
+import com.ai.abc.studio.model.ComponentDefinition;
+import com.ai.abc.studio.model.DBConnectProp;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.ui.DialogWrapper;
@@ -9,10 +11,13 @@ import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
+import org.jdesktop.swingx.JXRadioGroup;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,10 +40,15 @@ public class ComponentDialog extends DialogWrapper {
     private JCheckBox isExtendBaseEntityCheckBox = new JCheckBox("是否继承基础对象",true);
     private JCheckBox isAuditableCheckBox = new JCheckBox("是否生成审计（历史表）",true);
 
+    private JTextField dbUrlTextField = new JTextField("");
+    private JTextField dbUserTextField = new JTextField("");
+    private JTextField dbPasswordTextField = new JTextField("");
+
     public ComponentDialog() {
         super(true); // use current window as parent
         init();
         setTitle(null!= nameTextField.getText()? nameTextField.getText():""+"构件信息");
+
     }
 
     @Nullable
@@ -53,6 +63,9 @@ public class ComponentDialog extends DialogWrapper {
                 .addComponent(isLogicalDeleteCheckBox)
                 .addComponent(isExtendBaseEntityCheckBox)
                 .addComponent(isAuditableCheckBox)
+                .addLabeledComponent(new JLabel("数据连接URL:"), dbUrlTextField,1,false)
+                .addLabeledComponent(new JLabel("数据连接用户名:"), dbUserTextField,1,false)
+                .addLabeledComponent(new JLabel("数据连接密码:"), dbPasswordTextField,1,false)
                 .getPanel();
         return dialogPanel;
     }

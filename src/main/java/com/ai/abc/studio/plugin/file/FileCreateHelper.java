@@ -1,5 +1,6 @@
 package com.ai.abc.studio.plugin.file;
 
+import com.ai.abc.jpa.model.AbstractEntity;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.EntityAttributeDefinition;
 import com.ai.abc.studio.model.EntityDefinition;
@@ -10,10 +11,16 @@ import com.ai.abc.studio.util.MemoryFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.json.JsonParser;
 import com.intellij.openapi.project.Project;
+import com.intellij.psi.JavaPsiFacade;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.PsiShortNamesCache;
 import org.json.JSONObject;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -248,16 +255,6 @@ public class FileCreateHelper {
         return false;
     }
 
-    public static EntityDefinition getEntity(Project project,String fileName)throws Exception{
-        ComponentDefinition component = loadComponent(project);
-        for(EntityDefinition entity : component.getEntities()){
-            if(entity.getSimpleName().equalsIgnoreCase(fileName)){
-                return entity;
-            }
-        }
-        return null;
-    }
-
     public static String createEntityCode(Project project,EntityDefinition entity) throws Exception{
         ComponentDefinition component = loadComponent(project);
         if ((null == entity.getParentEntityName() || entity.getParentEntityName().isEmpty() || null == entity.getExtendsFromExternal() || entity.getExtendsFromExternal().isEmpty()) && component.isExtendsAbstractEntity()) {
@@ -451,5 +448,19 @@ public class FileCreateHelper {
             Files.createDirectories(filePath.getParent());
         }
         Files.write(filePath,restConfigCode.content);
+    }
+
+    public static List<String> getAbstractEntityFields(){
+        List<String> retList =new ArrayList<>();
+        try {
+            Class aCls = Class.forName(AbstractEntity.class.getName());
+            Field[] fields = aCls.getDeclaredFields();
+            for(Field field : fields){
+                retList.add(field.getName());
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return retList;
     }
 }

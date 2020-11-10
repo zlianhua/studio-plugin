@@ -37,12 +37,16 @@ public class NewSingleEntityAction extends AnAction {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         Project project = e.getData(PlatformDataKeys.PROJECT);
         PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
+        String classPath = virtualFile.getPath();
+        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+        String modelPackageStarts=project.getBasePath();
+        String modelPackageEnds=project.getName().toLowerCase()+"/model/";
         boolean enable = false;
-        if(virtualFile.getFileType().getName().equalsIgnoreCase("java")){
+        if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")){
             try {
-                String mainFileName = psiFile.getName().replaceAll(".java","");
-                EntityDefinition entity = FileCreateHelper.getEntity(project,mainFileName);
-                if(!entity.isValueObject()){
+                String fileName = psiFile.getName().replaceAll(".java","");
+                PsiClass cls = PsJavaFileHelper.getEntity(psiPackage,fileName);
+                if(!PsJavaFileHelper.isValueEntity(cls)){
                     enable =true;
                 }
             } catch (Exception exception) {
@@ -85,9 +89,9 @@ public class NewSingleEntityAction extends AnAction {
                         if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
                             annotations.add("@OneToMany(cascade= CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)");
                             refFieldName = refFieldName+"List";
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText("List<"+entity.getSimpleName()+">",null);
+                            fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText("List<"+entity.getSimpleName()+">",null);
                         }else{
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText(entity.getSimpleName(),null);
+                            fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(entity.getSimpleName(),null);
                         }
                         String memFileName = CamelCaseStringUtil.camelCase2UnderScore(entity.getSimpleName());
                         annotations.add("@JoinColumn(name=\""+memFileName.toUpperCase()+"_ID\")");

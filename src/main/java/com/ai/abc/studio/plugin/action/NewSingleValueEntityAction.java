@@ -27,9 +27,14 @@ import java.util.List;
 public class NewSingleValueEntityAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
+        Project project = e.getData(PlatformDataKeys.PROJECT);
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
+        //获取当前类文件的路径
+        String classPath = virtualFile.getPath();
+        String modelPackageStarts=project.getBasePath();
+        String modelPackageEnds=project.getName().toLowerCase()+"/model/";
         boolean enable = false;
-        if(virtualFile.getFileType().getName().equalsIgnoreCase("java")){
+        if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds)&&virtualFile.getFileType().getName().equalsIgnoreCase("java")){
             enable =true;
         }
         e.getPresentation().setEnabledAndVisible(enable);
