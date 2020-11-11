@@ -10,26 +10,17 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
-import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.impl.ProjectManagerImpl;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
-import com.intellij.psi.impl.file.impl.FileManagerImpl;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.util.ResourceUtil;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.util.StringUtils;
 
 import javax.swing.*;
-import java.awt.*;
-import java.io.File;
-import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -47,7 +38,6 @@ public class NewSingleRootEntityAction extends AnAction {
         }else{
             e.getPresentation().setEnabledAndVisible(false);
         }
-        //virtualFile.getFileType().getName().equalsIgnoreCase("java")
     }
 
     @Override

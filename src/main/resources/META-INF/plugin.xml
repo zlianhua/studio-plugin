@@ -27,11 +27,14 @@
         <action id="com.ai.abc.studio.plugin.action.NewSingleRootEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleRootEntityAction" text="根对象" description="新建根对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
-        <action id="com.ai.abc.studio.plugin.action.NewSingleValueEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleValueEntityAction" text="值对象成员" description="新建值对象成员">
+        <action id="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" class="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" text="从数据库表生成对象" description="从数据库表生成对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
+        <action id="com.ai.abc.studio.plugin.action.NewSingleValueEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleValueEntityAction" text="值对象成员" description="新建值对象成员">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
         <action id="com.ai.abc.studio.plugin.action.NewSingleEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleEntityAction" text="实体对象成员" description="新建实体对象成员">
-            <add-to-group group-id="NewGroup" anchor="first" />
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
         <action id="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" class="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" text="从数据库表导入属性" description="从数据库表导入属性">
             <add-to-group group-id="GenerateGroup" anchor="first" />

@@ -37,20 +37,22 @@ public class NewSingleEntityAction extends AnAction {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         Project project = e.getData(PlatformDataKeys.PROJECT);
         PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
-        String classPath = virtualFile.getPath();
-        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
-        String modelPackageStarts=project.getBasePath();
-        String modelPackageEnds=project.getName().toLowerCase()+"/model/";
         boolean enable = false;
-        if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")){
-            try {
-                String fileName = psiFile.getName().replaceAll(".java","");
-                PsiClass cls = PsJavaFileHelper.getEntity(psiPackage,fileName);
-                if(!PsJavaFileHelper.isValueEntity(cls)){
-                    enable =true;
+        if(null!=psiFile){
+            String classPath = virtualFile.getPath();
+            PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+            String modelPackageStarts=project.getBasePath();
+            String modelPackageEnds=project.getName().toLowerCase()+"/model/";
+            if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")){
+                try {
+                    String fileName = psiFile.getName().replaceAll(".java","");
+                    PsiClass cls = PsJavaFileHelper.getEntity(psiPackage,fileName);
+                    if(!PsJavaFileHelper.isValueEntity(cls)){
+                        enable =true;
+                    }
+                } catch (Exception exception) {
+                    exception.printStackTrace();
                 }
-            } catch (Exception exception) {
-                exception.printStackTrace();
             }
         }
         e.getPresentation().setEnabledAndVisible(enable);

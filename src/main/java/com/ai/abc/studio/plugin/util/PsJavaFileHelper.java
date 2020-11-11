@@ -3,14 +3,31 @@ package com.ai.abc.studio.plugin.util;
 import com.ai.abc.core.annotations.AiAbcMemberEntity;
 import com.ai.abc.core.annotations.AiAbcRootEntity;
 import com.ai.abc.core.annotations.AiAbcValueEntity;
+import com.ai.abc.jpa.model.EntityToJsonConverter;
+import com.ai.abc.studio.model.ComponentDefinition;
+import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.util.CamelCaseStringUtil;
+import com.ai.abc.studio.util.DBMetaDataUtil;
+import com.ai.abc.studio.util.pdm.Column;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.*;
+import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
+import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.ui.CollectionListModel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.envers.Audited;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PsJavaFileHelper {
@@ -109,5 +126,66 @@ public class PsJavaFileHelper {
             }
         }
         return false;
+    }
+
+    public static void createPsiClassFieldsFromTableColumn(Project project, PsiClass psiClass, List<Column> columns, ComponentDefinition component){
+        List<String> abstractEntityFieldNames = new ArrayList<>();
+        if(component.isExtendsAbstractEntity()){
+            abstractEntityFieldNames = FileCreateHelper.getAbstractEntityFields();
+        }
+        final List<String> ignoreFields = abstractEntityFieldNames;
+        if (null != columns && !columns.isEmpty()) {
+            for (Column column : columns) {
+                String remarks = column.getName();
+                String columnName = column.getCode();
+                String fieldName = CamelCaseStringUtil.underScore2Camel(columnName, true);
+                if(component.isExtendsAbstractEntity() && ignoreFields.contains(fieldName)){
+                    continue;
+                }
+                PsiField field = PsJavaFileHelper.findField(psiClass, fieldName);
+                if (null != field) {
+                    PsJavaFileHelper.deleteField(psiClass, fieldName);
+                }
+                PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+                String fieldJavaType = DBMetaDataUtil.columnDataTypeToJavaType(column.getType());
+                PsiType fieldType = new PsiJavaParserFacadeImpl(psiClass.getProject()).createTypeFromText(fieldJavaType, null);
+                List<String> annotations = new ArrayList<>();
+                annotations.add("@Column(name =\"" + columnName.toUpperCase() + "\")");
+                if (column.isPkFlag()) {
+                    annotations.add("@GeneratedValue(strategy = GenerationType.AUTO)");
+                    annotations.add("@Id");
+                }
+                if (column.isClob()) {
+                    annotations.add("@Lob");
+                }
+                field = PsJavaFileHelper.addFieldWithAnnotations(psiClass, fieldName, fieldType, annotations);
+                PsiComment comment = elementFactory.createCommentFromText("/**" + remarks + "*/", null);
+                field.getModifierList().addBefore(comment, field.getModifierList().getFirstChild());
+            }
+            CodeStyleManager.getInstance(project).reformat(psiClass);
+        }
+    }
+
+    public static void addNewEntityImports(Project project, PsiClass psiClass){
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
+        PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand("javax.persistence");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(Audited.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(Getter.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(NoArgsConstructor.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(Setter.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("com.ai.abc.core.annotations");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(EntityToJsonConverter.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(Timestamp.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(List.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
     }
 }
