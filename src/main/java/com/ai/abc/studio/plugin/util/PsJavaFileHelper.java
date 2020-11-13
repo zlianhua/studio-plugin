@@ -9,6 +9,7 @@ import com.ai.abc.studio.plugin.file.FileCreateHelper;
 import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Column;
+import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
@@ -23,12 +24,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.envers.Audited;
+import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.swing.*;
 import java.awt.*;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class PsJavaFileHelper {
     public static PsiField findField(PsiClass psiClass, String fieldName){
@@ -187,5 +191,230 @@ public class PsJavaFileHelper {
         file.getImportList().add(importStatement);
         importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(List.class.getName(), GlobalSearchScope.allScope(project)));
         file.getImportList().add(importStatement);
+    }
+
+    public static void addMethodToInterfaceClass(PsiClass psiClass,PsiMethod[] methods,PsiElementFactory elementFactory,JavaCodeStyleManager codeStyleManager){
+        for(PsiMethod method : methods){
+            if(null!=psiClass.findMethodBySignature(method,true)){
+                continue;
+            }
+            StringBuilder methodStr = new StringBuilder();
+            methodStr.append(method.getReturnType().getPresentableText())
+                    .append(" ")
+                    .append(method.getName())
+                    .append("(");
+            JvmParameter[] parameters= method.getParameters();
+            for(JvmParameter parameter : parameters){
+                methodStr.append(parameter.getType().toString().replace("PsiType:", ""))
+                        .append(" ")
+                        .append(parameter.getName())
+                        .append(",");
+            }
+            if(methodStr.toString().endsWith(",")){
+                methodStr.deleteCharAt(methodStr.lastIndexOf(","));
+            }
+            methodStr.append(")");
+            PsiReferenceList throwList = method.getThrowsList();
+            if(null!=throwList && throwList.getRole().equals(PsiReferenceList.Role.THROWS_LIST)){
+                PsiJavaCodeReferenceElement [] throwEles = throwList.getReferenceElements();
+                methodStr.append(" throws ");
+                for(PsiJavaCodeReferenceElement element : throwEles){
+                    methodStr.append(element.getReferenceName())
+                            .append(",");
+                }
+                methodStr.deleteCharAt(methodStr.lastIndexOf(","));
+            }
+            methodStr.append(";");
+            psiClass.add(elementFactory.createMethodFromText(methodStr.toString(),psiClass));
+        }
+        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
+        codeStyleManager.shortenClassReferences(file);
+    }
+
+    public static void addMethodToRestProxyClass(ComponentDefinition component,String rootEntitySimpleName,PsiClass psiClass,PsiMethod[] methods,PsiElementFactory elementFactory,JavaCodeStyleManager codeStyleManager,boolean isGet){
+        String baseUrl = "        String url = baseUrl+\"/"+StringUtils.uncapitalize(component.getSimpleName());
+        String rootEntityVar = StringUtils.uncapitalize(rootEntitySimpleName);
+        for(PsiMethod method : methods){
+            String returnTypeName = method.getReturnType().getPresentableText();
+            if(null!=psiClass.findMethodBySignature(method,false)){
+                continue;
+            }
+            String url = baseUrl+"/"+method.getName()+"\"";
+            StringBuilder paramMap = new StringBuilder();
+            paramMap.append("        Map<String, Object> params = new HashMap<>();\n");
+            StringBuilder methodStr = new StringBuilder();
+            methodStr.append("public ")
+                    .append(returnTypeName)
+                    .append(" ")
+                    .append(method.getName())
+                    .append("(");
+            JvmParameter[] parameters= method.getParameters();
+            for(JvmParameter parameter : parameters){
+                String paramName = parameter.getName();
+                String paramType = parameter.getType().toString().replace("PsiType:", "");
+                if(isGet || method.getName().startsWith("delete")){
+                    paramMap.append("        params.put(").append("\"").append(paramName).append("\",").append(paramName).append(");\n");
+                    url+="+\"/\"+"+paramName+"+\"/\"";
+                }else if (!paramType.equals(rootEntitySimpleName)){
+                    if(!url.contains("?")){
+                        url+="+\"?"+paramName+"=\"+"+paramName;
+                    }else{
+                        url+="+\"&"+paramName+"=\"+"+paramName;
+                    }
+                }
+                methodStr.append(paramType)
+                        .append(" ")
+                        .append(paramName)
+                        .append(",");
+            }
+            if(methodStr.toString().endsWith(",")){
+                methodStr.deleteCharAt(methodStr.lastIndexOf(","));
+            }
+            if (url.endsWith("+\"/\"")){
+                int lastIdx=url.lastIndexOf("+\"/\"");
+                url = url.substring(0,lastIdx);
+            }
+            url+=";\n";
+            methodStr.append(")");
+            PsiReferenceList throwList = method.getThrowsList();
+            if(null!=throwList && throwList.getRole().equals(PsiReferenceList.Role.THROWS_LIST)){
+                PsiJavaCodeReferenceElement [] throwEles = throwList.getReferenceElements();
+                if(null!=throwEles && throwEles.length>0){
+                    methodStr.append(" throws ");
+                    for(PsiJavaCodeReferenceElement element : throwEles){
+                        methodStr.append(element.getReferenceName())
+                                .append(",");
+                    }
+                    if(methodStr.toString().endsWith(",")){
+                        methodStr.deleteCharAt(methodStr.lastIndexOf(","));
+                    }
+                }
+            }
+            methodStr.append("{\n")
+                     .append("    ").append(url);
+            if(isGet){
+                methodStr.append(paramMap)
+                        .append("    HttpEntity<Map<String,Object>> entity = new HttpEntity<>(params, headers);\n");
+                        if(returnTypeName.contains("List<")){
+                            int start = returnTypeName.indexOf("List<");
+                            int end  = returnTypeName.indexOf(">",start);
+                            returnTypeName=returnTypeName.substring(start+"List<".length(),end);
+                            methodStr.append("    ResponseEntity<List> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, List.class);\n")
+                                    .append("    List<Map> mapList = (List<Map>) resultEntity.getBody();\n")
+                                    .append("    List<"+returnTypeName+"> list = new ArrayList<>();\n")
+                                    .append("    if(null!=mapList && mapList.size()>0){\n")
+                                    .append("        list = mapper.convertValue(mapList, TypeFactory.defaultInstance().constructCollectionType(ArrayList.class,"+rootEntitySimpleName+".class));\n")
+                                    .append("    }\n")
+                                    .append("    return list;\n");
+                        }else{
+                            methodStr.append("    ResponseEntity<"+returnTypeName+"> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, "+returnTypeName+".class);\n")
+                                    .append("    return resultEntity.getBody();\n");
+                        }
+
+                methodStr.append("}\n");
+            }else{
+                if(method.getName().startsWith("delete")){
+                    methodStr.append(paramMap)
+                    .append("    restTemplate.delete(url,params);");
+                }else {
+                    methodStr.append("    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON_UTF8));\n")
+                            .append("    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);\n")
+                            .append("    HttpEntity<" + rootEntitySimpleName + "> request = new HttpEntity<>(" + rootEntityVar + ",headers);\n");
+                    if(!returnTypeName.equals("void")){
+                        methodStr.append("    ResponseEntity<String> resp = restTemplate.postForEntity(url,request,String.class);\n")
+                                .append("    String retObjStr = resp.getBody();\n")
+                                .append("    return mapper.readValue(retObjStr,"+rootEntitySimpleName+".class);\n");
+                    }else{
+                        methodStr.append("    restTemplate.postForEntity(url,request,String.class);\n");
+                    }
+                }
+                methodStr.append("}\n");
+            }
+            psiClass.add(elementFactory.createMethodFromText(methodStr.toString(),psiClass));
+        }
+        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
+        codeStyleManager.shortenClassReferences(file);
+    }
+
+    public static void addMethodToControllerClass(Project project,String rootEntitySimpleName,String serviceName,PsiClass psiClass,PsiMethod[] methods,PsiElementFactory elementFactory,JavaCodeStyleManager codeStyleManager,boolean isGet){
+        for(PsiMethod method : methods){
+            if(null!=psiClass.findMethodBySignature(method,false)){
+                continue;
+            }
+            StringBuilder mappingAnnotation = new StringBuilder();
+            if(isGet) {
+                mappingAnnotation.append("GetMapping");
+            }else if (method.getName().startsWith("delete")){
+                mappingAnnotation.append("DeleteMapping");
+            }else{
+                mappingAnnotation.append("PostMapping");
+            }
+            mappingAnnotation.append("(value = \"/")
+            .append(method.getName());
+            StringBuilder methodStr = new StringBuilder();
+            methodStr.append("public ");
+            if(!method.getReturnType().getPresentableText().equals("void")){
+                methodStr.append("ResponseEntity<");
+                methodStr.append(method.getReturnType().getPresentableText())
+                .append(">");
+            }else{
+                methodStr.append("void");
+            }
+            methodStr.append(" ")
+                    .append(method.getName())
+                    .append("(");
+            JvmParameter[] parameters= method.getParameters();
+            StringBuilder paramValue = new StringBuilder();
+            for(JvmParameter parameter : parameters){
+                String paramType = parameter.getType().toString().replace("PsiType:", "");
+                if(isGet || method.getName().startsWith("delete")){
+                    methodStr.append("@PathVariable(value = \"")
+                    .append(parameter.getName())
+                    .append("\") ");
+                    mappingAnnotation.append("/{")
+                    .append(parameter.getName())
+                    .append("}");
+                }else{
+                    if(paramType.equals(rootEntitySimpleName)){
+                        methodStr.append("@RequestBody ");
+                    }else{
+                        methodStr.append("@RequestParam ");
+                    }
+                }
+                paramValue.append(parameter.getName()+",");
+                methodStr.append(paramType)
+                        .append(" ")
+                        .append(parameter.getName())
+                        .append(",");
+            }
+            if(paramValue.toString().endsWith(",")){
+                paramValue.deleteCharAt(paramValue.lastIndexOf(","));
+            }
+            if(methodStr.toString().endsWith(",")){
+                methodStr.deleteCharAt(methodStr.lastIndexOf(","));
+            }
+            methodStr.append("){\n")
+                    .append("    try {\n");
+            if(!method.getReturnType().getPresentableText().equals("void")){
+                methodStr.append("       "+method.getReturnType().getPresentableText()+" returnValue = ");
+            }
+            methodStr.append("      "+serviceName+"."+method.getName()+"("+paramValue+");\n");
+            if(!method.getReturnType().getPresentableText().equals("void")){
+                methodStr.append("       return ResponseEntity.ok(returnValue);\n");
+            }
+            methodStr.append("    } catch (Exception e) {\n")
+                    .append("       log.error(\"业务执行错误\",e);\n")
+                    .append("       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, \"业务执行错误\", e);\n")
+                    .append("    }\n")
+                    .append("}\n");
+
+            PsiMethod restMethod = elementFactory.createMethodFromText(methodStr.toString(),psiClass);
+            mappingAnnotation.append("\",consumes = \"application/json;charset=utf-8\",produces=\"application/json;charset=utf-8\")");
+            restMethod.getModifierList().addAnnotation(mappingAnnotation.toString());
+            restMethod.getModifierList().addAnnotation("ResponseBody");
+            psiClass.add(restMethod);
+        }
+        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
+        codeStyleManager.shortenClassReferences(file);
     }
 }

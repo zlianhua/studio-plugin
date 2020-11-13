@@ -32,8 +32,8 @@ public class NewSingleRootEntityAction extends AnAction {
         //获取当前类文件的路径
         String classPath = virtualFile.getPath();
         String modelPackageStarts=project.getBasePath();
-        String modelPackaheEnds=project.getName().toLowerCase()+"/model";
-        if((classPath.contains(modelPackageStarts))&&classPath.endsWith(modelPackaheEnds)){
+        String modelPackageEnds=project.getName().toLowerCase()+"/model";
+        if((classPath.contains(modelPackageStarts))&&classPath.endsWith(modelPackageEnds)){
             e.getPresentation().setEnabledAndVisible(true);
         }else{
             e.getPresentation().setEnabledAndVisible(false);

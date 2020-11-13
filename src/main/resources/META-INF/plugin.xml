@@ -40,6 +40,12 @@
         <action id="com.ai.abc.studio.plugin.action.NewSingleEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleEntityAction" text="实体对象成员" description="新建实体对象成员">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
+        <action id="com.ai.abc.studio.plugin.action.ExtractToInterfaceAction" class="com.ai.abc.studio.plugin.action.ExtractToInterfaceAction" text="抽取业务方法到接口" description="抽取业务方法到接口">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
+        <action id="com.ai.abc.studio.plugin.action.ExtractToRestControllerAction" class="com.ai.abc.studio.plugin.action.ExtractToRestControllerAction" text="抽取业务方法到RestController" description="抽取业务方法到RestController">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
         <action id="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" class="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" text="从数据库表导入属性" description="从数据库表导入属性">
             <add-to-group group-id="GenerateGroup" anchor="first" />
         </action>

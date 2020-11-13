@@ -243,6 +243,12 @@ public class FileCreateHelper {
         return packageName+".model."+entitySimpleName;
     }
 
+    public static String getControllerClassFullName(Project project) throws Exception{
+        ComponentDefinition component = loadComponent(project);
+        String packageName = EntityUtil.getComponentPackageName(component);
+        return packageName+".rest."+component.getSimpleName()+"Controller";
+    }
+
     public static boolean isRootEntity(Project project,String fileName)throws Exception{
         ComponentDefinition component = loadComponent(project);
         for(EntityDefinition entity : component.getEntities()){
