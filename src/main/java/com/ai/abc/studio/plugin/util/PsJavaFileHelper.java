@@ -8,27 +8,34 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
 import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.DBMetaDataUtil;
+import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.pdm.Column;
 import com.intellij.lang.jvm.JvmParameter;
+import com.intellij.lang.jvm.types.JvmType;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.psi.impl.file.PsiDirectoryFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.ui.CollectionListModel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.envers.Audited;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +80,14 @@ public class PsJavaFileHelper {
         }
         psiClass.add(field);
         return field;
+    }
+
+    public static void addClassAnnotation(PsiClass psiClass,String annotation){
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
+        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
+        PsiAnnotation aAnnotation = elementFactory.createAnnotationFromText(annotation, psiClass);
+        PsiElement psiElement = codeStyleManager.shortenClassReferences(aAnnotation);
+        psiClass.getModifierList().addBefore(psiElement, psiClass.getModifierList().getFirstChild());
     }
 
     public static JComponent getDialogSource(AnActionEvent e){
@@ -234,6 +249,7 @@ public class PsJavaFileHelper {
     public static void addMethodToRestProxyClass(ComponentDefinition component,String rootEntitySimpleName,PsiClass psiClass,PsiMethod[] methods,PsiElementFactory elementFactory,JavaCodeStyleManager codeStyleManager,boolean isGet){
         String baseUrl = "        String url = baseUrl+\"/"+StringUtils.uncapitalize(component.getSimpleName());
         String rootEntityVar = StringUtils.uncapitalize(rootEntitySimpleName);
+        boolean useCommonRequest = false;
         for(PsiMethod method : methods){
             String returnTypeName = method.getReturnType().getPresentableText();
             if(null!=psiClass.findMethodBySignature(method,false)){
@@ -251,11 +267,16 @@ public class PsJavaFileHelper {
             JvmParameter[] parameters= method.getParameters();
             for(JvmParameter parameter : parameters){
                 String paramName = parameter.getName();
-                String paramType = parameter.getType().toString().replace("PsiType:", "");
-                if(isGet || method.getName().startsWith("delete")){
+                String paramType = parameter.getType().toString();
+                paramType = paramType.replace("PsiType:", "");
+                boolean isCommonRequestParam =paramType.startsWith("CommonRequest<")?true:false;
+                if(isCommonRequestParam){
+                    useCommonRequest = true;
+                }
+                if(!isCommonRequestParam && (isGet || method.getName().startsWith("delete"))){
                     paramMap.append("        params.put(").append("\"").append(paramName).append("\",").append(paramName).append(");\n");
                     url+="+\"/\"+"+paramName+"+\"/\"";
-                }else if (!paramType.equals(rootEntitySimpleName)){
+                }else if (!paramType.contains(rootEntitySimpleName)){
                     if(!url.contains("?")){
                         url+="+\"?"+paramName+"=\"+"+paramName;
                     }else{
@@ -295,35 +316,34 @@ public class PsJavaFileHelper {
             if(isGet){
                 methodStr.append(paramMap)
                         .append("    HttpEntity<Map<String,Object>> entity = new HttpEntity<>(params, headers);\n");
-                        if(returnTypeName.contains("List<")){
-                            int start = returnTypeName.indexOf("List<");
-                            int end  = returnTypeName.indexOf(">",start);
-                            returnTypeName=returnTypeName.substring(start+"List<".length(),end);
-                            methodStr.append("    ResponseEntity<List> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, List.class);\n")
-                                    .append("    List<Map> mapList = (List<Map>) resultEntity.getBody();\n")
-                                    .append("    List<"+returnTypeName+"> list = new ArrayList<>();\n")
-                                    .append("    if(null!=mapList && mapList.size()>0){\n")
-                                    .append("        list = mapper.convertValue(mapList, TypeFactory.defaultInstance().constructCollectionType(ArrayList.class,"+rootEntitySimpleName+".class));\n")
-                                    .append("    }\n")
-                                    .append("    return list;\n");
-                        }else{
-                            methodStr.append("    ResponseEntity<"+returnTypeName+"> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, "+returnTypeName+".class);\n")
-                                    .append("    return resultEntity.getBody();\n");
-                        }
-
+                if(!returnTypeName.contains("CommonResponse<") && returnTypeName.contains("List<")){
+                    int start = returnTypeName.indexOf("List<");
+                    int end  = returnTypeName.indexOf(">",start);
+                    returnTypeName=returnTypeName.substring(start+"List<".length(),end);
+                    methodStr.append("    ResponseEntity<List> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, List.class);\n")
+                            .append("    List<Map> mapList = (List<Map>) resultEntity.getBody();\n")
+                            .append("    List<"+returnTypeName+"> list = new ArrayList<>();\n")
+                            .append("    if(null!=mapList && mapList.size()>0){\n")
+                            .append("        list = mapper.convertValue(mapList, TypeFactory.defaultInstance().constructCollectionType(ArrayList.class,"+rootEntitySimpleName+".class));\n")
+                            .append("    }\n")
+                            .append("    return list;\n");
+                }else{
+                    methodStr.append("    ResponseEntity<"+returnTypeName+"> resultEntity =  restTemplate.exchange(url,HttpMethod.GET,entity, "+returnTypeName+".class);\n")
+                            .append("    return resultEntity.getBody();\n");
+                }
                 methodStr.append("}\n");
             }else{
-                if(method.getName().startsWith("delete")){
+                if(!returnTypeName.startsWith("CommonResponse<") && method.getName().startsWith("delete")){
                     methodStr.append(paramMap)
                     .append("    restTemplate.delete(url,params);");
                 }else {
                     methodStr.append("    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON_UTF8));\n")
-                            .append("    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);\n")
-                            .append("    HttpEntity<" + rootEntitySimpleName + "> request = new HttpEntity<>(" + rootEntityVar + ",headers);\n");
+                            .append("    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);\n");
+                    String requestType = useCommonRequest?"CommonRequest<"+rootEntitySimpleName+">":rootEntitySimpleName;
+                    methodStr.append("    HttpEntity<" + requestType + "> request = new HttpEntity<>(" + rootEntityVar + ",headers);\n");
                     if(!returnTypeName.equals("void")){
-                        methodStr.append("    ResponseEntity<String> resp = restTemplate.postForEntity(url,request,String.class);\n")
-                                .append("    String retObjStr = resp.getBody();\n")
-                                .append("    return mapper.readValue(retObjStr,"+rootEntitySimpleName+".class);\n");
+                        methodStr.append("    ResponseEntity<"+requestType+"> resp = restTemplate.postForEntity(url,request,String.class);\n")
+                                .append("    return resp.getBody();\n");
                     }else{
                         methodStr.append("    restTemplate.postForEntity(url,request,String.class);\n");
                     }
@@ -342,6 +362,7 @@ public class PsJavaFileHelper {
                 continue;
             }
             StringBuilder mappingAnnotation = new StringBuilder();
+            String returnType = method.getReturnType().getPresentableText();
             if(isGet) {
                 mappingAnnotation.append("GetMapping");
             }else if (method.getName().startsWith("delete")){
@@ -353,9 +374,9 @@ public class PsJavaFileHelper {
             .append(method.getName());
             StringBuilder methodStr = new StringBuilder();
             methodStr.append("public ");
-            if(!method.getReturnType().getPresentableText().equals("void")){
+            if(!returnType.equals("void")){
                 methodStr.append("ResponseEntity<");
-                methodStr.append(method.getReturnType().getPresentableText())
+                methodStr.append(returnType)
                 .append(">");
             }else{
                 methodStr.append("void");
@@ -366,8 +387,10 @@ public class PsJavaFileHelper {
             JvmParameter[] parameters= method.getParameters();
             StringBuilder paramValue = new StringBuilder();
             for(JvmParameter parameter : parameters){
-                String paramType = parameter.getType().toString().replace("PsiType:", "");
-                if(isGet || method.getName().startsWith("delete")){
+                String parameterType = parameter.getType().toString();
+                String paramType = parameterType.replace("PsiType:", "");
+                boolean isCommonRequestParam =parameterType.startsWith("CommonRequest<")?true:false;
+                if(!isCommonRequestParam && (isGet || method.getName().startsWith("delete"))){
                     methodStr.append("@PathVariable(value = \"")
                     .append(parameter.getName())
                     .append("\") ");
@@ -375,7 +398,7 @@ public class PsJavaFileHelper {
                     .append(parameter.getName())
                     .append("}");
                 }else{
-                    if(paramType.equals(rootEntitySimpleName)){
+                    if(paramType.equals(rootEntitySimpleName) || isCommonRequestParam){
                         methodStr.append("@RequestBody ");
                     }else{
                         methodStr.append("@RequestParam ");
@@ -396,11 +419,19 @@ public class PsJavaFileHelper {
             methodStr.append("){\n")
                     .append("    try {\n");
             if(!method.getReturnType().getPresentableText().equals("void")){
-                methodStr.append("       "+method.getReturnType().getPresentableText()+" returnValue = ");
+                methodStr.append("       "+returnType+" returnValue = ");
             }
             methodStr.append("      "+serviceName+"."+method.getName()+"("+paramValue+");\n");
-            if(!method.getReturnType().getPresentableText().equals("void")){
-                methodStr.append("       return ResponseEntity.ok(returnValue);\n");
+            if(!returnType.equals("void")){
+                if(returnType.contains("CommonResponse<")){
+                    methodStr.append("    if(returnValue.isSuccess()){\n")
+                            .append("        return ResponseEntity.ok(returnValue);\n")
+                            .append("    }else{\n")
+                            .append("        ResponseEntity resp = new ResponseEntity(returnValue,HttpStatus.INTERNAL_SERVER_ERROR);\n")
+                            .append("        return resp;\n")
+                            .append("    }\n");
+                }
+
             }
             methodStr.append("    } catch (Exception e) {\n")
                     .append("       log.error(\"业务执行错误\",e);\n")
@@ -416,5 +447,74 @@ public class PsJavaFileHelper {
         }
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
         codeStyleManager.shortenClassReferences(file);
+    }
+
+    public static PsiClass createRestController(Project project,ComponentDefinition component) throws Exception{
+        Path controllerPath = Paths.get(project.getBasePath()+ File.separator+FileCreateHelper.getRestControllerPath(component));
+        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(VirtualFileManager.getInstance().findFileByNioPath(controllerPath));
+        PsiClass controller = JavaDirectoryService.getInstance().createClass(directory, component.getSimpleName()+"Controller");
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiJavaFile file = (PsiJavaFile)controller.getContainingFile();
+        addClassAnnotation(controller,"@Slf4j");
+        PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand("com.ai.abc.api.model");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("org.springframework.beans.factory.annotation");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("org.springframework.http");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("org.springframework.web.bind.annotation");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(ResponseStatusException.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(Slf4j.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        String modelPkgName = EntityUtil.getComponentPackageName(component)+".model";
+        importStatement = elementFactory.createImportStatementOnDemand(modelPkgName);
+        file.getImportList().add(importStatement);
+        String apiPkgName = EntityUtil.getComponentPackageName(component)+".api";
+        importStatement = elementFactory.createImportStatementOnDemand(apiPkgName);
+        file.getImportList().add(importStatement);
+        return controller;
+    }
+    public static PsiClass createRestProxy(Project project,ComponentDefinition component,String commandProxyName) throws Exception{
+        Path controllerPath = Paths.get(project.getBasePath()+ File.separator+FileCreateHelper.getRestProxyPath(component));
+        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(VirtualFileManager.getInstance().findFileByNioPath(controllerPath));
+        PsiClass restProxy = JavaDirectoryService.getInstance().createClass(directory, commandProxyName);
+        PsiJavaFile file = (PsiJavaFile)restProxy.getContainingFile();
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        String modelPkgName = EntityUtil.getComponentPackageName(component)+".model";
+        PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(modelPkgName);
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("org.springframework.http");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("java.util");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("com.ai.abc.api.model");
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(org.springframework.stereotype.Service.class.getName(), GlobalSearchScope.allScope(project)));
+        file.getImportList().add(importStatement);
+        importStatement = elementFactory.createImportStatementOnDemand("org.springframework.beans.factory.annotation");
+        file.getImportList().add(importStatement);
+        addClassAnnotation(restProxy,"@Service");
+        PsiType StringType = new PsiJavaParserFacadeImpl(project).createTypeFromText(String.class.getName(),null);
+        List<String> annotations = new ArrayList<>();
+        annotations.add("@Autowired");
+        addFieldWithAnnotations(restProxy,"baseUrl",StringType,annotations);
+
+        PsiType restTemplateType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.web.client.RestTemplate",null);
+        PsiField restTemplateField = addField(restProxy,restTemplateType,"restTemplate");
+        PsiExpression restTemplate = elementFactory.createExpressionFromText("new RestTemplate()",restTemplateField);
+        restTemplateField.setInitializer(restTemplate);
+
+        PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("com.fasterxml.jackson.databind.ObjectMapper",null);
+        PsiField mapperField = addField(restProxy,mapperType,"mapper");
+        PsiExpression mapper = elementFactory.createExpressionFromText("new ObjectMapper()",mapperField);
+        mapperField.setInitializer(mapper);
+
+        PsiType headersType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.http.HttpHeaders",null);
+        PsiField headersField = addField(restProxy,headersType,"headers");
+        PsiExpression headers = elementFactory.createExpressionFromText("new HttpHeaders()",headersField);
+        headersField.setInitializer(headers);
+        return restProxy;
     }
 }

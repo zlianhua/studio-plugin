@@ -46,6 +46,9 @@
         <action id="com.ai.abc.studio.plugin.action.ExtractToRestControllerAction" class="com.ai.abc.studio.plugin.action.ExtractToRestControllerAction" text="抽取业务方法到RestController" description="抽取业务方法到RestController">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
+        <action id="com.ai.abc.studio.plugin.action.MockEntityJsonAction" class="com.ai.abc.studio.plugin.action.MockEntityJsonAction" text="生成实体模拟Json数据" description="生成实体模拟Json数据">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
         <action id="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" class="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" text="从数据库表导入属性" description="从数据库表导入属性">
             <add-to-group group-id="GenerateGroup" anchor="first" />
         </action>

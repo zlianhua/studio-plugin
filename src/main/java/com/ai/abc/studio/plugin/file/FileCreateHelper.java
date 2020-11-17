@@ -8,25 +8,31 @@ import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.MemoryFile;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
 import com.intellij.json.JsonParser;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiClass;
+import com.intellij.psi.*;
+import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiShortNamesCache;
+import com.intellij.psi.util.PsiUtil;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class FileCreateHelper {
     public static String createMainPom(ComponentDefinition component) throws Exception{
@@ -61,6 +67,27 @@ public class FileCreateHelper {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(component);
         Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,json.getBytes(), StandardOpenOption.CREATE);
+    }
+
+    public static void saveEntityMockedJson(ComponentDefinition component,String entityName,String json) throws Exception{
+        StringBuilder entityJsonPath =getPackagePath(component)
+                .append(File.separator)
+                .append(component.getSimpleName().toLowerCase())
+                .append("-service".toLowerCase())
+                .append(File.separator)
+                .append("src")
+                .append(File.separator)
+                .append("test")
+                .append(File.separator)
+                .append("resources")
+                .append(File.separator)
+                .append(entityName)
+                .append(".json");
+        Path filePath = Paths.get(entityJsonPath.toString());
         if(filePath.getParent() != null) {
             Files.createDirectories(filePath.getParent());
         }
@@ -295,13 +322,14 @@ public class FileCreateHelper {
         saveMetaData(component);
         //生成接口、服务、rest和rest Proxy
         if(entity.isRoot()){
-            createInterfaceRelCodes(component,entity);
+            createInterfaceRelCodes(component);
         }
         return filePath.toString();
     }
 
-    private static void createInterfaceRelCodes(ComponentDefinition component,EntityDefinition rootEntity) throws Exception{
+    private static void createInterfaceRelCodes(ComponentDefinition component) throws Exception{
         List<EntityDefinition> entities = new ArrayList<>();
+        EntityDefinition rootEntity =EntityUtil.getRootEntity(component);
         entities.add(rootEntity);
         //repository
         MemoryFile repositoryCode = ComponentVmUtil.createRepositoryCode(component,rootEntity);
@@ -314,45 +342,13 @@ public class FileCreateHelper {
         }
         Files.write(filePath,repositoryCode.content);
         //command api
-        MemoryFile apiCode = ComponentVmUtil.createApiCode(component,rootEntity);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(apiCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,apiCode.content);
+        createCommandApi(component);
         //query api
-        MemoryFile queryApiCode = ComponentVmUtil.createQueryApiCode(component,rootEntity);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(queryApiCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,queryApiCode.content);
+        createQueryApi(component);
         //service
-        MemoryFile serviceCode = ComponentVmUtil.createServiceCode(component,rootEntity);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(serviceCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,serviceCode.content);
+        createCommandService(component);
         //queryService
-        MemoryFile queryServiceCode = ComponentVmUtil.createQueryServiceCode(component,rootEntity);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(queryServiceCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,queryServiceCode.content);
+        createQueryService(component);
         //service test
         //service test code
         MemoryFile testServiceCode = ComponentVmUtil.createTestCode(component,rootEntity,entities);
@@ -385,15 +381,7 @@ public class FileCreateHelper {
         }
         Files.write(filePath,testServiceAppFileMainCode.content);
         //rest
-        MemoryFile restCode = ComponentVmUtil.createRestCode(component,entities,entities);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(restCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,restCode.content);
+        createRestController(component);
         //rest test code
         MemoryFile testRestCode = ComponentVmUtil.createRestTestCode(component,entities);
         fileName = getPackagePath(component)
@@ -425,25 +413,9 @@ public class FileCreateHelper {
         }
         Files.write(filePath,testRestAppFileCode.content);
         //rest proxy
-        MemoryFile restProxyCode = ComponentVmUtil.createRestProxyCode(component,rootEntity,entities);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(restProxyCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,restProxyCode.content);
+        createCommandRestProxy(component);
         //query rest proxy
-        MemoryFile queryRestProxyCode = ComponentVmUtil.createQueryRestProxyCode(component,rootEntity);
-        fileName = getPackagePath(component)
-                .append(File.separator)
-                .append(queryRestProxyCode.fileName);
-        filePath = Paths.get(fileName.toString());
-        if(filePath.getParent() != null) {
-            Files.createDirectories(filePath.getParent());
-        }
-        Files.write(filePath,queryRestProxyCode.content);
+        createQueryRestProxy(component);
         //rest configration
         MemoryFile restConfigCode = ComponentVmUtil.createRestConfigrationCode(component,entities,entities);
         fileName = getPackagePath(component)
@@ -454,6 +426,111 @@ public class FileCreateHelper {
             Files.createDirectories(filePath.getParent());
         }
         Files.write(filePath,restConfigCode.content);
+    }
+
+    public static String createCommandApi(ComponentDefinition component) throws Exception{
+        //command api
+        MemoryFile apiCode = ComponentVmUtil.createApiCode(component,EntityUtil.getRootEntity(component));
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(apiCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,apiCode.content);
+        return fileName.toString();
+    }
+
+    public static String createQueryApi(ComponentDefinition component) throws Exception{
+        MemoryFile queryApiCode = ComponentVmUtil.createQueryApiCode(component,EntityUtil.getRootEntity(component));
+        StringBuilder fileName= getPackagePath(component)
+                .append(File.separator)
+                .append(queryApiCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryApiCode.content);
+        return fileName.toString();
+    }
+
+    public static String createCommandService(ComponentDefinition component) throws Exception{
+        MemoryFile serviceCode = ComponentVmUtil.createServiceCode(component,EntityUtil.getRootEntity(component));
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(serviceCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,serviceCode.content);
+        return fileName.toString();
+    }
+
+    public static String createQueryService(ComponentDefinition component) throws Exception{
+        MemoryFile queryServiceCode = ComponentVmUtil.createQueryServiceCode(component,EntityUtil.getRootEntity(component));
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(queryServiceCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryServiceCode.content);
+        return fileName.toString();
+    }
+
+    public static String getRestControllerPath(ComponentDefinition component) throws Exception{
+        return  ComponentVmUtil.getArtifactPrefix(component) + "-rest/src/main/java/" + EntityUtil.getComponentPathName(component) + "/rest";
+    }
+
+    public static String getRestProxyPath(ComponentDefinition component) throws Exception{
+        return  ComponentVmUtil.getArtifactPrefix(component) + "-rest-proxy/src/main/java/" + EntityUtil.getComponentPathName(component) + "/rest/proxy";
+    }
+
+    public static String createRestController(ComponentDefinition component) throws Exception{
+        List entities = new ArrayList();
+        entities.add(EntityUtil.getRootEntity(component));
+        MemoryFile restCode = ComponentVmUtil.createRestCode(component,entities,entities);
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(restCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restCode.content);
+        return fileName.toString();
+    }
+
+    public static String createCommandRestProxy(ComponentDefinition component) throws Exception{
+        EntityDefinition rootEntity = EntityUtil.getRootEntity(component);
+        List entities = new ArrayList();
+        entities.add(rootEntity);
+        MemoryFile restProxyCode = ComponentVmUtil.createRestProxyCode(component,rootEntity,entities);
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(restProxyCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restProxyCode.content);
+        return fileName.toString();
+    }
+
+    public static String createQueryRestProxy(ComponentDefinition component) throws Exception{
+        MemoryFile queryRestProxyCode = ComponentVmUtil.createQueryRestProxyCode(component,EntityUtil.getRootEntity(component));
+        StringBuilder fileName = getPackagePath(component)
+                .append(File.separator)
+                .append(queryRestProxyCode.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,queryRestProxyCode.content);
+        return fileName.toString();
     }
 
     public static List<String> getAbstractEntityFields(){
@@ -468,5 +545,90 @@ public class FileCreateHelper {
             e.printStackTrace();
         }
         return retList;
+    }
+
+    public static JSONObject generatePsiClassJson(Project project,PsiClass psiClass,JSONObject jsonObject) throws Exception{
+        if(jsonObject==null){
+            jsonObject = new JSONObject();
+        }
+        PsiClassType[] extendsList = psiClass.getExtendsListTypes();
+        for(PsiClassType extendsType : extendsList){
+            PsiClass extendsClass = JavaPsiFacade.getInstance(project).findClass(extendsType.getCanonicalText(), GlobalSearchScope.allScope(project));
+            if(null!=extendsClass){
+                jsonObject = generatePsiClassJson(project,extendsClass,jsonObject);
+            }
+        }
+        for(PsiField field : psiClass.getFields()){
+            if(field.getModifierList().hasModifierProperty("final")){
+                continue;
+            }
+            PsiType fieldType = field.getType();
+            boolean hasJsonIgnoreAnnotation = false;
+            for(PsiAnnotation annotation : field.getAnnotations()){
+                if(annotation.getQualifiedName().equals(JsonIgnore.class.getName())
+                ||annotation.getQualifiedName().equals(JsonBackReference.class.getName())){
+                    hasJsonIgnoreAnnotation=true;
+                    break;
+                }
+            }
+            if(hasJsonIgnoreAnnotation){
+                continue;
+            }
+
+            if(fieldType instanceof PsiClassType){
+                if(PsiPrimitiveType.getUnboxedType(field.getType()) instanceof PsiPrimitiveType
+                || field.getType().getCanonicalText().equals(String.class.getName())
+                        || field.getType().getCanonicalText().equals(Date.class.getName())
+                        | field.getType().getCanonicalText().equals(Timestamp.class.getName())){
+                    jsonObject = generatePrimitiveField(fieldType.getPresentableText(),field.getName(),jsonObject);
+                }else if (fieldType.getCanonicalText().startsWith(List.class.getName())
+                        || fieldType.getCanonicalText().equals(Set.class.getName())){
+                    PsiType psiType1 = PsiUtil.extractIterableTypeParameter(fieldType, false);
+                    PsiClass fieldClass = JavaPsiFacade.getInstance(project).findClass(psiType1.getCanonicalText(), GlobalSearchScope.allScope(project));
+                    JSONArray array = new JSONArray();
+                    if (null != fieldClass) {
+                        JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
+                        array.put(fieldJson);
+                    }
+                    jsonObject.put(field.getName(), array);
+                }else{
+                    PsiClass fieldClass = JavaPsiFacade.getInstance(project).findClass(fieldType.getCanonicalText(), GlobalSearchScope.allScope(project));
+                    if (null != fieldClass) {
+                        JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
+                        jsonObject.put(field.getName(), fieldJson);
+                    }
+                }
+            }else{
+                jsonObject = generatePrimitiveField(fieldType.getPresentableText(),field.getName(),jsonObject);
+            }
+        }
+        return jsonObject;
+    }
+
+    public static JSONObject generatePrimitiveField(String type,String name,JSONObject jsonObject){
+        if(null==jsonObject){
+            jsonObject = new JSONObject();
+        }
+        if(type.equals(Long.class.getSimpleName()) || type.equals(long.class.getSimpleName())){
+            jsonObject.put(name,0L);
+        }else if (type.equals(Integer.class.getSimpleName()) || type.equals(int.class.getSimpleName())){
+            jsonObject.put(name,0);
+        }else if (type.equals(Double.class.getSimpleName()) || type.equals(double.class.getSimpleName())){
+            jsonObject.put(name,0);
+        }else if (type.equals(Float.class.getSimpleName()) || type.equals(float.class.getSimpleName())){
+            jsonObject.put(name,0);
+        }else if (type.equals(Boolean.class.getSimpleName()) || type.equals(boolean.class.getSimpleName())) {
+            jsonObject.put(name,false);
+        }else if (type.equals(Date.class.getSimpleName())) {
+            SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date date = new Date(System.currentTimeMillis());
+            jsonObject.put(name,formatter.format(date));
+        }else if (type.equals(Timestamp.class.getSimpleName())) {
+            jsonObject.put(name,new Date().getTime());
+        }else {
+            jsonObject.put(name, "");
+        }
+
+        return jsonObject;
     }
 }
