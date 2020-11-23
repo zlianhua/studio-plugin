@@ -481,12 +481,20 @@ public class FileCreateHelper {
         return fileName.toString();
     }
 
-    public static String getRestControllerPath(ComponentDefinition component) throws Exception{
+    public static String getRestControllerPath(ComponentDefinition component){
         return  ComponentVmUtil.getArtifactPrefix(component) + "-rest/src/main/java/" + EntityUtil.getComponentPathName(component) + "/rest";
     }
 
-    public static String getRestProxyPath(ComponentDefinition component) throws Exception{
+    public static String getRestProxyPath(ComponentDefinition component){
         return  ComponentVmUtil.getArtifactPrefix(component) + "-rest-proxy/src/main/java/" + EntityUtil.getComponentPathName(component) + "/rest/proxy";
+    }
+
+    public static String getModelPath(ComponentDefinition component){
+        return  ComponentVmUtil.getArtifactPrefix(component) + "-model/src/main/java/" + EntityUtil.getComponentPathName(component) + "/model";
+    }
+
+    public static String getApiPath(ComponentDefinition component){
+        return  ComponentVmUtil.getArtifactPrefix(component) + "-api/src/main/java/" + EntityUtil.getComponentPathName(component) + "/api";
     }
 
     public static String createRestController(ComponentDefinition component) throws Exception{

@@ -1,7 +1,8 @@
 package com.ai.abc.studio.plugin.action;
 
+import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
-import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
+import com.ai.abc.studio.plugin.util.ApiClassCreator;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -38,25 +39,30 @@ public class ExtractToInterfaceAction extends AnAction {
     public void actionPerformed(AnActionEvent e) {
         try {
             project = e.getData(PlatformDataKeys.PROJECT);
+            ComponentDefinition component = FileCreateHelper.loadComponent(project);
             PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
             PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
-            String mainFileName = psiFile.getName().replaceAll(".java","");
-            String mainClassName = FileCreateHelper.getEntityClassFullName(project,mainFileName).replace(".model.",".service.");;
+            String mainFileName = psiFile.getName().replaceAll(".java", "");
+            String mainClassName = FileCreateHelper.getEntityClassFullName(project, mainFileName).replace(".model.", ".service.");
+            ;
             PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
             JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
             PsiMethod[] methods = mainPsiClass.getMethods();
+            String intfaceName = mainFileName.replace("Impl", "");
             //addToInterface
-            String interfaceClsName = FileCreateHelper.getEntityClassFullName(project, StringUtils.replace(mainFileName,"Impl","")).replace(".model.",".api.");
-            PsiClass intfPsiClass = JavaPsiFacade.getInstance(project).findClass(interfaceClsName, GlobalSearchScope.projectScope(project));
+            String interfaceClsName = FileCreateHelper.getEntityClassFullName(project, StringUtils.replace(mainFileName, "Impl", "")).replace(".model.", ".api.");
             WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                 @Override
                 public void run() {
-                    PsJavaFileHelper.addMethodToInterfaceClass(intfPsiClass,methods,elementFactory,codeStyleManager);
+                    PsiClass intfPsiClass = JavaPsiFacade.getInstance(project).findClass(interfaceClsName, GlobalSearchScope.projectScope(project));
+                    if (null == intfPsiClass) {
+                        intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
+                    }
+                    ApiClassCreator.addMethodToInterfaceClass(intfPsiClass, methods, elementFactory, codeStyleManager);
                 }
             });
-        } catch (Exception exception) {
-            exception.printStackTrace();
+        }catch(Exception e1){
+            e1.printStackTrace();
         }
-
     }
 }

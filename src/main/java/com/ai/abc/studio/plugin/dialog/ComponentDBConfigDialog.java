@@ -17,9 +17,9 @@ import java.awt.event.ActionListener;
 @Getter
 @Setter
 public class ComponentDBConfigDialog extends DialogWrapper {
-    private JTextField dbUrlTextField = new JTextField("");
-    private JTextField dbUserTextField = new JTextField("");
-    private JTextField dbPasswordTextField = new JTextField("");
+    private JTextField dbUrlTextField = new JTextField("jdbc:mysql://10.19.14.28:3306/bmgnew?useUnicode=true&ampcharacterEncoding=utf-8&useSSL=false");
+    private JTextField dbUserTextField = new JTextField("aibp");
+    private JTextField dbPasswordTextField = new JTextField("Aibp@123");
 
     public ComponentDBConfigDialog() {
         super(true); // use current window as parent

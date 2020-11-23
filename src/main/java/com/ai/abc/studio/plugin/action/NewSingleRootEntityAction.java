@@ -4,12 +4,14 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.util.EntityUtil;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
@@ -66,19 +68,19 @@ public class NewSingleRootEntityAction extends AnAction {
                         return;
                     }
                 }
-                JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
-                PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
-                EntityDefinition entity = new EntityDefinition();
-                entity.setSimpleName(entitySimpleName);
-                entity.setName(component.getName().toLowerCase() +".model."+entitySimpleName);
-                entity.setDescription(newSingleEntityDialog.getDescTextField().getText());
-                entity.setRoot(newSingleEntityDialog.getIsRootCheckBox().isSelected());
-                entity.setValueObject(newSingleEntityDialog.getIsValueCheckBox().isSelected());
-                entity.setAbstract(newSingleEntityDialog.getIsAbstractCheckBox().isSelected());
-                String fileName = FileCreateHelper.createEntityCode(project,entity);
-                Path path = Paths.get(fileName);
-                VirtualFile virtualFile = VfsUtil.findFile(path,true);
-                new OpenFileDescriptor(project, virtualFile).navigate(true);
+
+                WriteCommandAction.runWriteCommandAction(project, new Runnable() {
+                    @Override
+                    public void run() {
+                        PsiClass rootEntity = EntityCreator.createEntity(project, component, entitySimpleName, "", EntityCreator.EntityType.RootEntity);
+                        if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
+                            if (!rootEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
+                                rootEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                            }
+                        }
+                        new OpenFileDescriptor(project, rootEntity.getContainingFile().getVirtualFile()).navigate(true);
+                    }
+                });
             } catch (Exception exception) {
                 exception.printStackTrace();
             }

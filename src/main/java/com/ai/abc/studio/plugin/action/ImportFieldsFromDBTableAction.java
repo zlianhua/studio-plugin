@@ -4,6 +4,7 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.ImportFieldsFromDBTableDialog;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Column;
@@ -59,7 +60,7 @@ public class ImportFieldsFromDBTableAction extends AnAction {
                     WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                         @Override
                         public void run() {
-                            PsJavaFileHelper.createPsiClassFieldsFromTableColumn(project, psiClass, columns, component);
+                            EntityCreator.createPsiClassFieldsFromTableColumn(project, psiClass, columns, component);
                         }
                     });
                 }

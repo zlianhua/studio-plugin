@@ -1,8 +1,10 @@
 package com.ai.abc.studio.plugin.action;
 
+import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -49,40 +51,39 @@ public class NewSingleValueEntityAction extends AnAction {
         newSingleEntityDialog.getIsAbstractCheckBox().setEnabled(false);
         newSingleEntityDialog.getIsOneToManyCheckBox().setEnabled(true);
         if (newSingleEntityDialog.showAndGet()) {
-            EntityDefinition entity = new EntityDefinition();
-            entity.setSimpleName(newSingleEntityDialog.getNameTextField().getText());
-            entity.setDescription(newSingleEntityDialog.getDescTextField().getText());
-            entity.setRoot(newSingleEntityDialog.getIsRootCheckBox().isSelected());
-            entity.setValueObject(newSingleEntityDialog.getIsValueCheckBox().isSelected());
-            entity.setAbstract(newSingleEntityDialog.getIsAbstractCheckBox().isSelected());
             try {
                 Project project = e.getData(PlatformDataKeys.PROJECT);
+                ComponentDefinition component = FileCreateHelper.loadComponent(project);
+                String simpleEntityName = newSingleEntityDialog.getNameTextField().getText();
                 PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
                 String mainFileName = psiFile.getName().replaceAll(".java","");
                 String mainClassName = FileCreateHelper.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
-                PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
+                PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+                PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
                 WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                     @Override
                     public void run() {
-                        String refFieldName = StringUtils.uncapitalize(entity.getSimpleName());
+                        String refFieldName = StringUtils.uncapitalize(simpleEntityName);
                         PsiType fieldType;
                         if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
                             refFieldName = refFieldName+"List";
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText("List<"+entity.getSimpleName()+">",null);
+                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText("List<"+simpleEntityName+">",null);
                         }else{
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText(entity.getSimpleName(),null);
+                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText(simpleEntityName,null);
                         }
                         PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
                         List<String> annotations = new ArrayList<>();
-                        annotations.add("@Convert(converter = com.ai.abc.jpa.model.EntityToJsonConverter.class)");
+                        annotations.add("@Convert(converter = EntityToJsonConverter.class)");
                         annotations.add("@Lob");
-                        PsJavaFileHelper.addFieldWithAnnotations(mainPsiClass,refFieldName,fieldType,annotations);
+                        PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
+                        PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity);
+                        if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
+                            if (!valueEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
+                                valueEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                            }
+                        }new OpenFileDescriptor(project, valueEntity.getContainingFile().getVirtualFile()).navigate(true);
                     }
                 });
-                String fileName = FileCreateHelper.createEntityCode(project,entity);
-                Path path = Paths.get(fileName);
-                VirtualFile virtualFile = VfsUtil.findFile(path,true);
-                new OpenFileDescriptor(project, virtualFile).navigate(true);
             } catch (Exception exception) {
                 exception.printStackTrace();
             }

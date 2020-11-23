@@ -4,6 +4,7 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.CreateEntityFromDBTableDialog;
 import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.DBMetaDataUtil;
@@ -41,7 +42,6 @@ public class CreateEntityFromDBTableAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
-        VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         try {
             ComponentDefinition component = FileCreateHelper.loadComponent(project);
             CreateEntityFromDBTableDialog dialog = new CreateEntityFromDBTableDialog(component);
@@ -50,8 +50,6 @@ public class CreateEntityFromDBTableAction extends AnAction {
                for(int selectedRow : selectedRows){
                    String tableName = (String) dialog.getDbTableTable().getValueAt(selectedRow, 1);
                    String entityName = StringUtils.capitalise(CamelCaseStringUtil.underScore2Camel(tableName,true));
-                   PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(virtualFile);
-                   PsiClass psiClass = JavaDirectoryService.getInstance().createClass(directory, entityName);
                    DBConnectProp dbConnectProp = component.getDbConnectProp();
                    String dbUrl = dbConnectProp.getDbUrl();
                    String dbUserName = dbConnectProp.getDbUserName();
@@ -60,19 +58,9 @@ public class CreateEntityFromDBTableAction extends AnAction {
                    WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                        @Override
                        public void run() {
-                           psiClass.getModifierList().addAnnotation("Getter");
-                           psiClass.getModifierList().addAnnotation("Setter");
-                           psiClass.getModifierList().addAnnotation("NoArgsConstructor");
-                           psiClass.getModifierList().addAnnotation("Table(name=\""+tableName.toUpperCase()+"\")");
-                           psiClass.getModifierList().addAnnotation("Entity");
-                           if(entityName.equalsIgnoreCase(component.getSimpleName())){
-                               psiClass.getModifierList().addAnnotation("AiAbcRootEntity");
-                           }else{
-                               psiClass.getModifierList().addAnnotation("AiAbcMemberEntity");
-                           }
-                           PsJavaFileHelper.addNewEntityImports(project,psiClass);
+                           PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,null);
                            if(null!=columns && !columns.isEmpty()){
-                               PsJavaFileHelper.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+                               EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
                            }
                        }
                    });
