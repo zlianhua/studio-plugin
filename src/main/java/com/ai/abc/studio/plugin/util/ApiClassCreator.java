@@ -17,7 +17,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class ApiClassCreator {
     public static PsiClass createApiClass(Project project, ComponentDefinition component, String className){
         Path apiPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getApiPath(component));

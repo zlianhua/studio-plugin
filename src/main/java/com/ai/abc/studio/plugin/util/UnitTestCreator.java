@@ -5,7 +5,6 @@ import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.MemoryFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -14,9 +13,7 @@ import com.intellij.psi.*;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.ProjectScope;
-import jnr.ffi.Struct;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +22,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class UnitTestCreator {
     public static PsiClass createUnitTest(Project project, ComponentDefinition component, PsiClass apiClass){
         String apiServiceName = apiClass.getName();

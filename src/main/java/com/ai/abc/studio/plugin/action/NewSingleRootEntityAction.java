@@ -18,7 +18,10 @@ import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class NewSingleRootEntityAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {

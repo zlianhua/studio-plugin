@@ -14,7 +14,10 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import org.jetbrains.annotations.NotNull;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class CreateUnitTestAction extends AnAction {
     private Project project;
     @Override

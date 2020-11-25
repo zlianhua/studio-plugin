@@ -8,15 +8,20 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
+import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.psi.search.GlobalSearchScope;
+import org.thymeleaf.util.StringUtils;
 
 import java.io.File;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class ServiceCreator {
     public static void createServicePath(ComponentDefinition component){
         StringBuilder servicePath = ComponentCreator.getPackagePath(component)
@@ -79,5 +84,38 @@ public class ServiceCreator {
             query = PsJavaFileHelper.createPsiClass(project,serviceVirtualFile,rootEntityName+"QueryServiceImpl",packageImports,classImports,classAnnotations,null);
             query.getImplementsList().add(elementFactory.createReferenceFromText(rootEntityName+"QueryService",query));
         }
+    }
+
+    public static void createCommandMethod(Project project,ComponentDefinition component,PsiClass commandServiceCls,String rootEntityName,String methodName){
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiField[] fields = commandServiceCls.getFields();
+        boolean hasRootRepository= false;
+        if(null!=fields && fields.length>0){
+            for(PsiField field : fields){
+                if(field.getName().equals(StringUtils.unCapitalize(rootEntityName)+"Repository")){
+                    hasRootRepository = true;
+                    break;
+                }
+            }
+        }
+        if(!hasRootRepository){
+            String repositoryPath = EntityUtil.getComponentPackageName(component)+".service.repository."+rootEntityName+"Repository";
+            PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(repositoryPath, GlobalSearchScope.allScope(project)));
+            PsiJavaFile file = (PsiJavaFile)commandServiceCls.getContainingFile();
+            file.getImportList().add(importStatement);
+
+            PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(rootEntityName+"Repository",null);
+            List<String> annotations = new ArrayList<>();
+            annotations.add("@Autowired");
+            PsJavaFileHelper.addField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository",null,apiType,annotations);
+        }
+        StringBuilder methodStr = new StringBuilder();
+        methodStr.append("public CommonResponse<").append(rootEntityName).append("> ").append(methodName).append("(CommonRequest<").append(rootEntityName).append("> request) throws Exception{\n")
+                .append("    ").append(rootEntityName).append(" ").append(StringUtils.unCapitalize(rootEntityName)).append(" = request.getData();\n")
+                .append("    ").append(StringUtils.unCapitalize(rootEntityName)).append(" = ").append(StringUtils.unCapitalize(rootEntityName)).append("Repository").append(".save(").append(StringUtils.unCapitalize(rootEntityName)).append(");\n")
+                .append("    ").append("return CommonResponse.ok(").append(StringUtils.unCapitalize(rootEntityName)).append(");\n")
+                .append("}\n");
+        commandServiceCls.add(elementFactory.createMethodFromText(methodStr.toString(),commandServiceCls));
+
     }
 }

@@ -19,7 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.envers.Audited;
-import org.jetbrains.jsonProtocol.JsonField;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
@@ -31,7 +30,10 @@ import java.nio.file.StandardOpenOption;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class EntityCreator {
     public enum EntityType{
         RootEntity,
@@ -231,5 +233,27 @@ public class EntityCreator {
             }
         }
         return null;
+    }
+
+    public static List<PsiClass> findRootEntities(Project project,ComponentDefinition component){
+        List<PsiClass> rootEntities = new ArrayList<>();
+        Path modelPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getModelPath(component));
+        VirtualFile modelVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(modelPath);
+        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(modelVirtualFile));
+        PsiClass[] entityClasses = psiPackage.getClasses();
+        if(null!=entityClasses && entityClasses.length>0){
+            for(PsiClass entityClass : entityClasses){
+                PsiAnnotation[] annotations = entityClass.getAnnotations();
+                if(null!=annotations){
+                    for(PsiAnnotation annotation : annotations){
+                        if(annotation.getQualifiedName().equals("com.ai.abc.core.annotations.AiAbcRootEntity")){
+                            rootEntities.add(entityClass);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return rootEntities;
     }
 }

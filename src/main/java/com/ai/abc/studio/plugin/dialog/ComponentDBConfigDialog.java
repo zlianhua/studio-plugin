@@ -1,19 +1,19 @@
 package com.ai.abc.studio.plugin.dialog;
 
-import com.intellij.openapi.fileChooser.FileChooser;
-import com.intellij.openapi.fileChooser.FileChooserDescriptor;
+
 import com.intellij.openapi.ui.DialogWrapper;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
-import com.intellij.openapi.vfs.VirtualFile;
+
 import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 @Getter
 @Setter
 public class ComponentDBConfigDialog extends DialogWrapper {

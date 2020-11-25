@@ -7,15 +7,18 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 @Getter
 @Setter
-public class CreateRestProcyDialog extends DialogWrapper {
+public class CreateRestProxyDialog extends DialogWrapper {
     private JCheckBox toRestControllerCheckBox = new JCheckBox("RestController",true);
     private JCheckBox toRestProxyCheckBox = new JCheckBox("RestProxy",true);
     private JCheckBox toBmgProxyCheckBox = new JCheckBox("BmgProxy",false);
 
-    public CreateRestProcyDialog() {
+    public CreateRestProxyDialog() {
         super(true); // use current window as parent
         init();
         setTitle("选择需要生成的接口文件");

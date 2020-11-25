@@ -20,7 +20,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class RestControllerCreator {
     public static PsiClass createRestController(Project project, ComponentDefinition component, String className){
         Path controllerPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestControllerPath(component));

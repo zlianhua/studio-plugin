@@ -6,7 +6,6 @@ import com.ai.abc.core.annotations.AiAbcValueEntity;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
@@ -17,9 +16,11 @@ import org.springframework.util.StringUtils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.nio.file.Path;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class PsJavaFileHelper {
     public static PsiField findField(PsiClass psiClass, String fieldName){
         List<PsiField> fields = (new CollectionListModel<>(psiClass.getFields())).getItems();
@@ -148,7 +149,7 @@ public class PsJavaFileHelper {
                 file.getImportList().add(importStatement);
             }
         }
-        if (null!=classImports) {
+        if (null!=classAnnotations) {
             for(String annotation : classAnnotations){
                 addClassAnnotation(psiClass,annotation);
             }

@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 @Getter
 @Setter
 public class NewSingleEntityDialog extends DialogWrapper {

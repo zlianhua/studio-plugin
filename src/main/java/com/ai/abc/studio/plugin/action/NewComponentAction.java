@@ -11,7 +11,10 @@ import com.intellij.openapi.project.impl.ProjectManagerImpl;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class NewComponentAction extends AnAction {
     @Override
     public void actionPerformed(AnActionEvent e) {

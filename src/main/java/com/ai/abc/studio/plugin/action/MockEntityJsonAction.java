@@ -14,7 +14,10 @@ import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class MockEntityJsonAction extends AnAction {
     private Project project;
     private ObjectMapper mapper = new ObjectMapper();

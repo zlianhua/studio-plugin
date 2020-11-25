@@ -24,7 +24,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class NewSingleEntityAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {

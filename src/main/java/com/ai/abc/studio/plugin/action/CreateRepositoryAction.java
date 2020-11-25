@@ -2,7 +2,6 @@ package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.util.ComponentCreator;
-import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.plugin.util.RepositoryCreator;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -17,7 +16,10 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiPackage;
 import org.jetbrains.annotations.NotNull;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class CreateRepositoryAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {

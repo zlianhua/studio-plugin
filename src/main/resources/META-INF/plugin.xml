@@ -58,5 +58,8 @@
         <action id="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" class="com.ai.abc.studio.plugin.action.ImportFieldsFromDBTableAction" text="从数据库表导入属性" description="从数据库表导入属性">
             <add-to-group group-id="GenerateGroup" anchor="first" />
         </action>
+        <action id="com.ai.abc.studio.plugin.action.CreateCommandMethodAction" class="com.ai.abc.studio.plugin.action.CreateCommandMethodAction" text="生成命令服务框架" description="生成命令服务框架">
+            <add-to-group group-id="GenerateGroup" anchor="first" />
+        </action>
     </actions>
 </idea-plugin>

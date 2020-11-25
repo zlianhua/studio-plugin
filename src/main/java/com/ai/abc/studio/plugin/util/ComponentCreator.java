@@ -2,22 +2,15 @@ package com.ai.abc.studio.plugin.util;
 
 import com.ai.abc.jpa.model.AbstractEntity;
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.model.EntityAttributeDefinition;
-import com.ai.abc.studio.model.EntityDefinition;
-import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.MemoryFile;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
-import com.intellij.json.JsonParser;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
-import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.psi.search.PsiShortNamesCache;
 import com.intellij.psi.util.PsiUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -25,7 +18,6 @@ import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,7 +25,10 @@ import java.nio.file.StandardOpenOption;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class ComponentCreator {
     public static String createMainPom(ComponentDefinition component) throws Exception{
         MemoryFile mainPom = ComponentVmUtil.createMainPom(component);

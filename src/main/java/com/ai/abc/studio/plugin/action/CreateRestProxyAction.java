@@ -1,7 +1,7 @@
 package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.plugin.dialog.CreateRestProcyDialog;
+import com.ai.abc.studio.plugin.dialog.CreateRestProxyDialog;
 import com.ai.abc.studio.plugin.util.*;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -20,7 +20,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class CreateRestProxyAction extends AnAction {
     private Project project;
     @Override
@@ -43,7 +46,7 @@ public class CreateRestProxyAction extends AnAction {
     @Override
     public void actionPerformed(AnActionEvent e) {
         try {
-            CreateRestProcyDialog dialog = new CreateRestProcyDialog();
+            CreateRestProxyDialog dialog = new CreateRestProxyDialog();
             if(dialog.showAndGet()){
                 project = e.getData(PlatformDataKeys.PROJECT);
                 ComponentDefinition component = ComponentCreator.loadComponent(project);

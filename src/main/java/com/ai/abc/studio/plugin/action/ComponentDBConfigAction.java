@@ -7,7 +7,10 @@ import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import org.jetbrains.annotations.NotNull;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class ComponentDBConfigAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {

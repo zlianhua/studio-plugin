@@ -20,7 +20,10 @@ import org.codehaus.plexus.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class CreateEntityFromDBTableAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {

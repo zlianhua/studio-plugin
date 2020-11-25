@@ -1,17 +1,11 @@
 package com.ai.abc.studio.plugin.util;
 
-import com.ai.abc.jpa.model.EntityToJsonConverter;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.util.EntityUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
-import com.intellij.psi.impl.file.PsiDirectoryFactory;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.envers.Audited;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.thymeleaf.util.StringUtils;
 
@@ -21,9 +15,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
+/**
+ * @author Lianhua zhang zhanglh2@asiainfo.com
+ * 2020.11
+ */
 public class RepositoryCreator {
     public static PsiClass createRepository(Project project, ComponentDefinition component,String rootEntityName) {
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
