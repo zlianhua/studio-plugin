@@ -1,21 +1,24 @@
 package com.ai.abc.studio.plugin.util;
 
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
+import com.ai.abc.studio.util.MemoryFile;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
-import com.intellij.psi.impl.file.PsiDirectoryFactory;
-import com.intellij.psi.search.GlobalSearchScope;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.io.Serializable;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -23,21 +26,34 @@ import java.util.List;
 
 public class RestProxyCreator {
     public static PsiClass createRestProxy(Project project, ComponentDefinition component, String proxyName){
-        Path restProxyPath = Paths.get(project.getBasePath()+ File.separator+ FileCreateHelper.getRestProxyPath(component));
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        String serviceName = proxyName.replace("RestProxy","");
+        Path restProxyPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestProxyPath(component));
+        VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(restProxyPath);
+        if(null==apiVirtualFile){
+            createRestProxyPath(component);
+            apiVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(restProxyPath);
+        }
         List<String> packageImports = new ArrayList<>();
         packageImports.add(EntityUtil.getComponentPackageName(component)+".model");
+        packageImports.add(EntityUtil.getComponentPackageName(component)+".api");
         packageImports.add("java.util");
         packageImports.add("com.ai.abc.api.model");
         packageImports.add("org.springframework.beans.factory.annotation");
+        packageImports.add("org.springframework.http");
 
         List<String> classImports = new ArrayList<>();
         classImports.add(org.springframework.stereotype.Service.class.getName());
         classImports.add("com.fasterxml.jackson.databind.type.TypeFactory");
+        classImports.add(RestTemplate.class.getName());
+        classImports.add(ObjectMapper.class.getName());
 
         List<String> classAnnotations = new ArrayList<>();
         classAnnotations.add("@Service");
 
-        PsiClass restProxy = PsJavaFileHelper.createPsiClass(project,restProxyPath,proxyName,packageImports,classImports,classAnnotations);
+        PsiClass restProxy = PsJavaFileHelper.createPsiClass(project,apiVirtualFile,proxyName,packageImports,classImports,classAnnotations,null);
+
+        restProxy.getImplementsList().add(elementFactory.createReferenceFromText(serviceName,restProxy));
 
         PsiType StringType = new PsiJavaParserFacadeImpl(project).createTypeFromText(String.class.getName(),null);
         List<String> annotations = new ArrayList<>();
@@ -46,15 +62,62 @@ public class RestProxyCreator {
 
         PsiType restTemplateType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.web.client.RestTemplate",null);
         annotations = new ArrayList<>();
-        PsJavaFileHelper.addField(restProxy,"restTemplate","new RestTemplate()",StringType,annotations);
+        PsJavaFileHelper.addField(restProxy,"restTemplate","new RestTemplate()",restTemplateType,annotations);
 
         PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("com.fasterxml.jackson.databind.ObjectMapper",null);
-        PsJavaFileHelper.addField(restProxy,"mapper","new ObjectMapper()",StringType,annotations);
+        PsJavaFileHelper.addField(restProxy,"mapper","new ObjectMapper()",mapperType,annotations);
 
         PsiType headersType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.http.HttpHeaders",null);
-        PsJavaFileHelper.addField(restProxy,"headers","new HttpHeaders()",StringType,annotations);
+        PsJavaFileHelper.addField(restProxy,"headers","new HttpHeaders()",headersType,annotations);
 
+        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(restProxy.getContainingFile().getParent());
+        PsiClass restConfigPsiClass = PsJavaFileHelper.getEntity(psiPackage,component.getSimpleName()+"RestConfiguration");
+        if(null==restConfigPsiClass){
+            restConfigPsiClass = createRestConfig(project,component);
+        }
+        StringBuilder methodStr = new StringBuilder();
+        methodStr.append("public ")
+                .append(serviceName)
+                .append(" ")
+                .append(StringUtils.uncapitalize(serviceName))
+                .append("(){\n")
+                .append("    return new ")
+                .append(proxyName)
+                .append("();\n")
+                .append("}\n");
+        PsiMethod getRestProxyBean = elementFactory.createMethodFromText(methodStr.toString(),restConfigPsiClass);
+        getRestProxyBean.getModifierList().addAnnotation("Bean");
+        restConfigPsiClass.add(getRestProxyBean);
         return restProxy;
+    }
+
+    public static PsiClass createRestConfig(Project project, ComponentDefinition component) {
+        Path restProxyPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestProxyPath(component));
+        VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(restProxyPath);
+        List<String> packageImports = new ArrayList<>();
+        packageImports.add(EntityUtil.getComponentPackageName(component)+".api");
+        packageImports.add("org.springframework.context.annotation");
+        packageImports.add("org.springframework.beans.factory.annotation");
+
+        List<String> classAnnotations = new ArrayList<>();
+        classAnnotations.add("@Configuration");
+        PsiClass restConfig = PsJavaFileHelper.createPsiClass(project,apiVirtualFile,component.getSimpleName()+"RestConfiguration",packageImports,null,classAnnotations,null);
+
+        PsiType StringType = new PsiJavaParserFacadeImpl(project).createTypeFromText(String.class.getName(),null);
+        List<String> annotations = new ArrayList<>();
+        annotations.add("@Value(\"${com.ai.bss.demo.baseurl}\")");
+        PsJavaFileHelper.addField(restConfig,"baseUrl",null,StringType,annotations);
+
+        //getBaseUrl method
+        StringBuilder methodStr = new StringBuilder();
+        methodStr.append("public String getBaseUrl(){\n")
+                .append("    return baseUrl;\n")
+                .append("}\n");
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiMethod  getBaseUrl = elementFactory.createMethodFromText(methodStr.toString(),restConfig);
+        getBaseUrl.getModifierList().addAnnotation("Bean");
+        restConfig.add(getBaseUrl);
+        return restConfig;
     }
 
     public static void addMethodToRestProxyClass(ComponentDefinition component, String rootEntitySimpleName, PsiClass psiClass, PsiMethod[] methods, PsiElementFactory elementFactory, JavaCodeStyleManager codeStyleManager, boolean isGet){
@@ -167,5 +230,38 @@ public class RestProxyCreator {
         }
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
         codeStyleManager.shortenClassReferences(file);
+    }
+
+    public static void createRestProxyPath(ComponentDefinition component){
+        StringBuilder restPath = ComponentCreator.getPackagePath(component)
+                .append(File.separator)
+                .append(component.getSimpleName().toLowerCase())
+                .append("-rest-proxy".toLowerCase());
+        File rest = new File(restPath.toString());
+        if(!rest.exists()){
+            rest.mkdirs();
+        }
+        StringBuilder restSrcPkgPath = ComponentCreator.componentSrcPkg(component,restPath)
+                .append(File.separator)
+                .append("rest")
+                .append(File.separator)
+                .append("proxy");
+        File restSrcPkg = new File(restSrcPkgPath.toString());
+        if(!restSrcPkg.exists()){
+            restSrcPkg.mkdirs();
+        }
+    }
+
+    public static void createRestProxyModule(ComponentDefinition component)  throws Exception{
+        createRestProxyPath(component);
+        MemoryFile restProxyPom = ComponentVmUtil.createRestProxyPom(component);
+        StringBuilder fileName = ComponentCreator.getPackagePath(component)
+                .append(File.separator)
+                .append(restProxyPom.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restProxyPom.content);
     }
 }

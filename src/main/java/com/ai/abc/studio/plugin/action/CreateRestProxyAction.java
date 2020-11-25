@@ -2,11 +2,7 @@ package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.dialog.CreateRestProcyDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
-import com.ai.abc.studio.plugin.util.ApiClassCreator;
-import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
-import com.ai.abc.studio.plugin.util.RestControllerCreator;
-import com.ai.abc.studio.plugin.util.RestProxyCreator;
+import com.ai.abc.studio.plugin.util.*;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -50,12 +46,13 @@ public class CreateRestProxyAction extends AnAction {
             CreateRestProcyDialog dialog = new CreateRestProcyDialog();
             if(dialog.showAndGet()){
                 project = e.getData(PlatformDataKeys.PROJECT);
-                ComponentDefinition component = FileCreateHelper.loadComponent(project);
+                ComponentDefinition component = ComponentCreator.loadComponent(project);
                 PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
                 PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
                 String mainFileName = psiFile.getName().replaceAll(".java","");
-                String mainClassName = FileCreateHelper.getEntityClassFullName(project,mainFileName).replace(".model.",".api.");;
-                PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
+                PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+                String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replace(".model.",".api.");;
+                PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
                 JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
                 PsiMethod[] methods = mainPsiClass.getMethods();
                 boolean isGet =  mainFileName.endsWith("QueryService")?true:false;
@@ -64,7 +61,7 @@ public class CreateRestProxyAction extends AnAction {
                 tmpRootEntitySimpleName = StringUtils.replace(tmpRootEntitySimpleName,"Service","");
                 String rootEntitySimpleName = tmpRootEntitySimpleName;
                 if(dialog.getToRestControllerCheckBox().isSelected()){
-                    String controllerClsName = FileCreateHelper.getControllerClassFullName(project);
+                    String controllerClsName = RestControllerCreator.getControllerClassFullName(project);
                     WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                         @Override
                         public void run() {
@@ -85,13 +82,18 @@ public class CreateRestProxyAction extends AnAction {
                     });
                 }
                 if(dialog.getToRestProxyCheckBox().isSelected()){
-                    String restProxyClsName = FileCreateHelper.getEntityClassFullName(project, StringUtils.replace(mainFileName+"RestProxy","ServiceImpl","")).replace(".model.",".rest.proxy.");
+                    String restProxyClsName = EntityCreator.getEntityClassFullName(project, StringUtils.replace(mainFileName+"RestProxy","ServiceImpl","")).replace(".model.",".rest.proxy.");
                     WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                         @Override
                         public void run() {
                             PsiClass proxyClass = JavaPsiFacade.getInstance(project).findClass(restProxyClsName, GlobalSearchScope.projectScope(project));
                             if(null==proxyClass){
                                 proxyClass = RestProxyCreator.createRestProxy(project,component,StringUtils.replace(mainFileName+"RestProxy","ServiceImpl",""));
+                            }else{
+                                PsiClass restConfigPsiClass = PsJavaFileHelper.getEntity(psiPackage,component.getSimpleName()+"RestConfiguration");
+                                if(null==restConfigPsiClass){
+                                    RestProxyCreator.createRestConfig(project,component);
+                                }
                             }
                             RestProxyCreator.addMethodToRestProxyClass(component,rootEntitySimpleName,proxyClass,methods,elementFactory,codeStyleManager,isGet);
                             CodeStyleManager.getInstance(project).reformat(proxyClass);

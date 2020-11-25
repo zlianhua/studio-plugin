@@ -2,12 +2,11 @@ package com.ai.abc.studio.plugin.dialog;
 
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Table;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.table.JBTable;
 import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
@@ -20,7 +19,6 @@ import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.sql.SQLException;
 import java.util.List;
 @Getter
 @Setter
@@ -55,7 +53,7 @@ public class ImportFieldsFromDBTableDialog extends DialogWrapper {
                     && null!=dbConnectProp.getDbUserName()
                     && null!=dbConnectProp.getDbPassword()){
                         component.setDbConnectProp(dbConnectProp);
-                        FileCreateHelper.saveMetaData(component);
+                        ComponentCreator.saveMetaData(component);
                         dbConnectPropConfiged = true;
                     }else{
                         Messages.showInfoMessage("数据库连接信息为空！", "未设置数据库连接信息");
@@ -65,6 +63,8 @@ public class ImportFieldsFromDBTableDialog extends DialogWrapper {
                     e.printStackTrace();
                 }
             }
+        }else{
+            dbConnectPropConfiged = true;
         }
 
         JPanel dialogPanel = null;

@@ -3,7 +3,7 @@ package com.ai.abc.studio.plugin.action;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.ComponentDBConfigDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +12,7 @@ public class ComponentDBConfigAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         try {
-            ComponentDefinition component = FileCreateHelper.loadComponent(e.getProject());
+            ComponentDefinition component = ComponentCreator.loadComponent(e.getProject());
             if(null==component){
                 e.getPresentation().setEnabledAndVisible(false);
             }
@@ -24,7 +24,7 @@ public class ComponentDBConfigAction extends AnAction {
     @Override
     public void actionPerformed(AnActionEvent e) {
         try {
-            ComponentDefinition component = FileCreateHelper.loadComponent(e.getProject());
+            ComponentDefinition component = ComponentCreator.loadComponent(e.getProject());
             DBConnectProp dbConnectProp = component.getDbConnectProp();
             ComponentDBConfigDialog componentDialog = new ComponentDBConfigDialog();
             componentDialog.getDbUrlTextField().setText(dbConnectProp.getDbUrl());
@@ -35,7 +35,7 @@ public class ComponentDBConfigAction extends AnAction {
                 dbConnectProp.setDbUserName(componentDialog.getDbUserTextField().getText());
                 dbConnectProp.setDbPassword(componentDialog.getDbPasswordTextField().getText());
                 component.setDbConnectProp(dbConnectProp);
-                FileCreateHelper.saveMetaData(component);
+                ComponentCreator.saveMetaData(component);
             }
         } catch (Exception exception) {
             exception.printStackTrace();

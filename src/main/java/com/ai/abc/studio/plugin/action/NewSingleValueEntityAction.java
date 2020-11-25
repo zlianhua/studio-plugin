@@ -1,9 +1,8 @@
 package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -13,16 +12,12 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
-import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,11 +48,11 @@ public class NewSingleValueEntityAction extends AnAction {
         if (newSingleEntityDialog.showAndGet()) {
             try {
                 Project project = e.getData(PlatformDataKeys.PROJECT);
-                ComponentDefinition component = FileCreateHelper.loadComponent(project);
+                ComponentDefinition component = ComponentCreator.loadComponent(project);
                 String simpleEntityName = newSingleEntityDialog.getNameTextField().getText();
                 PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
                 String mainFileName = psiFile.getName().replaceAll(".java","");
-                String mainClassName = FileCreateHelper.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
+                String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
                 PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
                 PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
                 WriteCommandAction.runWriteCommandAction(project, new Runnable() {

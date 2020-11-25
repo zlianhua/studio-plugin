@@ -3,41 +3,21 @@ package com.ai.abc.studio.plugin.util;
 import com.ai.abc.core.annotations.AiAbcMemberEntity;
 import com.ai.abc.core.annotations.AiAbcRootEntity;
 import com.ai.abc.core.annotations.AiAbcValueEntity;
-import com.ai.abc.jpa.model.EntityToJsonConverter;
-import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
-import com.ai.abc.studio.util.CamelCaseStringUtil;
-import com.ai.abc.studio.util.DBMetaDataUtil;
-import com.ai.abc.studio.util.EntityUtil;
-import com.ai.abc.studio.util.pdm.Column;
-import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.psi.*;
-import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
-import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.impl.file.PsiDirectoryFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.ui.CollectionListModel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
-import org.hibernate.envers.Audited;
 import org.springframework.util.StringUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.Serializable;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
 
 public class PsJavaFileHelper {
@@ -73,9 +53,11 @@ public class PsJavaFileHelper {
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
         JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
         PsiField field = elementFactory.createField(fieldName, type);
-        for (String annotation : annotaions){
-            PsiElement psiElement = codeStyleManager.shortenClassReferences(elementFactory.createAnnotationFromText(annotation, field));
-            field.getModifierList().addBefore(psiElement, field.getModifierList().getFirstChild());
+        if(null!=annotaions){
+            for (String annotation : annotaions){
+                PsiElement psiElement = codeStyleManager.shortenClassReferences(elementFactory.createAnnotationFromText(annotation, field));
+                field.getModifierList().addBefore(psiElement, field.getModifierList().getFirstChild());
+            }
         }
         if (!StringUtils.isEmpty(initialValue) ){
             PsiExpression initialValueExpress = elementFactory.createExpressionFromText(initialValue,field);
@@ -149,49 +131,66 @@ public class PsJavaFileHelper {
         }
         return false;
     }
-    public static PsiClass createPsiClass(Project project,Path classPath,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName){
-        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(VirtualFileManager.getInstance().findFileByNioPath(classPath));
+    public static PsiClass createPsiClass(Project project,VirtualFile controllerVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName){
+        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(controllerVirtualFile);
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         PsiClass psiClass = JavaDirectoryService.getInstance().createClass(directory, className);
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
-        for(String packageImport: packageImports){
-            PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
-            file.getImportList().add(importStatement);
+        if (null!=packageImports) {
+            for(String packageImport: packageImports){
+                PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
+                file.getImportList().add(importStatement);
+            }
         }
-        for(String classImport : classImports){
-            PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project)));
-            file.getImportList().add(importStatement);
+        if (null!=classImports) {
+            for(String classImport : classImports){
+                PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project)));
+                file.getImportList().add(importStatement);
+            }
         }
-        for(String annotation : classAnnotations){
-            addClassAnnotation(psiClass,annotation);
+        if (null!=classImports) {
+            for(String annotation : classAnnotations){
+                addClassAnnotation(psiClass,annotation);
+            }
         }
         if(!StringUtils.isEmpty(parentClassName)){
             psiClass.getExtendsList().add(elementFactory.createReferenceFromText(parentClassName,psiClass));
-        }else{
-            psiClass.getImplementsList().add(elementFactory.createReferenceFromText(Serializable.class.getName(),psiClass));
         }
-        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
+        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
         codeStyleManager.shortenClassReferences(file);
         return psiClass;
     }
 
-    public static PsiClass createInterface(Project project,Path classPath,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations){
-        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(VirtualFileManager.getInstance().findFileByNioPath(classPath));
+    public static PsiClass createInterface(Project project,VirtualFile apiVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName){
+        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(apiVirtualFile);
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         PsiClass psiClass = JavaDirectoryService.getInstance().createInterface(directory, className);
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
-        for(String packageImport: packageImports){
-            PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
-            file.getImportList().add(importStatement);
+
+        if (null!=packageImports) {
+            for(String packageImport: packageImports){
+                PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
+                file.getImportList().add(importStatement);
+            }
         }
-        for(String classImport : classImports){
-            PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project)));
-            file.getImportList().add(importStatement);
+        if (null!=classImports) {
+            for(String classImport : classImports){
+                PsiClass importCls = JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project));
+                if(null!=importCls){
+                    PsiImportStatement importStatement = elementFactory.createImportStatement(importCls);
+                    file.getImportList().add(importStatement);
+                }
+            }
         }
-        for(String annotation : classAnnotations){
-            addClassAnnotation(psiClass,annotation);
+        if (null!=classAnnotations) {
+            for(String annotation : classAnnotations){
+                addClassAnnotation(psiClass,annotation);
+            }
         }
-        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
+        if(!StringUtils.isEmpty(parentClassName)){
+            psiClass.getExtendsList().add(elementFactory.createReferenceFromText(parentClassName,psiClass));
+        }
+        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
         codeStyleManager.shortenClassReferences(file);
         return psiClass;
     }

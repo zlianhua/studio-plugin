@@ -3,9 +3,8 @@ package com.ai.abc.studio.plugin.action;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.CreateEntityFromDBTableDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.plugin.util.EntityCreator;
-import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Column;
@@ -17,7 +16,6 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
-import com.intellij.psi.impl.file.PsiDirectoryFactory;
 import org.codehaus.plexus.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -43,7 +41,7 @@ public class CreateEntityFromDBTableAction extends AnAction {
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
         try {
-            ComponentDefinition component = FileCreateHelper.loadComponent(project);
+            ComponentDefinition component = ComponentCreator.loadComponent(project);
             CreateEntityFromDBTableDialog dialog = new CreateEntityFromDBTableDialog(component);
             if (dialog.showAndGet()) {
                int[] selectedRows = dialog.getDbTableTable().getSelectedRows();

@@ -2,7 +2,8 @@ package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
+import com.ai.abc.studio.plugin.util.*;
 import com.intellij.openapi.actionSystem.*;
 import com.ai.abc.studio.plugin.dialog.*;
 
@@ -32,13 +33,13 @@ public class NewComponentAction extends AnAction {
             dbConnectProp.setDbPassword(componentDialog.getDbPasswordTextField().getText());
             component.setDbConnectProp(dbConnectProp);
             try {
-                FileCreateHelper.createAbcDirectory(component);
-                FileCreateHelper.createMainPom(component);
-                FileCreateHelper.createModelModule(component);
-                FileCreateHelper.createServiceModule(component);
-                FileCreateHelper.createApiModule(component);
-                FileCreateHelper.createRestModule(component);
-                FileCreateHelper.createRestProxyModule(component);
+                ComponentCreator.createAbcDirectory(component);
+                ComponentCreator.createMainPom(component);
+                EntityCreator.createModelModule(component);
+                ServiceCreator.createServiceModule(component);
+                ApiClassCreator.createApiModule(component);
+                RestControllerCreator.createRestModule(component);
+                RestProxyCreator.createRestProxyModule(component);
                 StringBuilder fileName = new StringBuilder()
                         .append(component.getProjectDirectory())
                         .append(File.separator)

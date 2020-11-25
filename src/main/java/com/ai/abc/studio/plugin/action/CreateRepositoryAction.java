@@ -1,27 +1,28 @@
 package com.ai.abc.studio.plugin.action;
 
+import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ai.abc.studio.plugin.util.RepositoryCreator;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.*;
-import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.JavaDirectoryService;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiPackage;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONObject;
 
-public class MockEntityJsonAction extends AnAction {
-    private Project project;
-    private ObjectMapper mapper = new ObjectMapper();
+public class CreateRepositoryAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
-        project = e.getData(PlatformDataKeys.PROJECT);
+        Project project = e.getData(PlatformDataKeys.PROJECT);
         PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
         boolean enable = false;
         if(null!=psiFile){
@@ -46,16 +47,19 @@ public class MockEntityJsonAction extends AnAction {
 
     @Override
     public void actionPerformed(AnActionEvent e) {
-        project = e.getData(PlatformDataKeys.PROJECT);
-        PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
         try {
+            Project project = e.getData(PlatformDataKeys.PROJECT);
+            ComponentDefinition component = ComponentCreator.loadComponent(project);
+            PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
             String mainFileName = psiFile.getName().replaceAll(".java","");
-            String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
-            PsiClass model = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
-            JSONObject jsonModel = ComponentCreator.generatePsiClassJson(project,model,null);
-            EntityCreator.saveEntityMockedJson(ComponentCreator.loadComponent(project),model.getName(),jsonModel.toString());
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            WriteCommandAction.runWriteCommandAction(project, new Runnable() {
+                @Override
+                public void run() {
+                    RepositoryCreator.createRepository(project,component,mainFileName);
+                }
+            });
+        } catch (Exception exception) {
+            exception.printStackTrace();
         }
     }
 }

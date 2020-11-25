@@ -1,11 +1,8 @@
 package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.model.EntityDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
-import com.ai.abc.studio.plugin.util.EntityCreator;
-import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
+import com.ai.abc.studio.plugin.util.*;
 import com.ai.abc.studio.util.EntityUtil;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -15,16 +12,12 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
-import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class NewSingleRootEntityAction extends AnAction {
     @Override
@@ -53,7 +46,7 @@ public class NewSingleRootEntityAction extends AnAction {
         if (newSingleEntityDialog.showAndGet()) {
             try {
                 Project project = e.getData(PlatformDataKeys.PROJECT);
-                ComponentDefinition component = FileCreateHelper.loadComponent(project);
+                ComponentDefinition component = ComponentCreator.loadComponent(project);
                 String packageName = EntityUtil.getComponentPackageName(component)+".model.";
                 String entitySimpleName = newSingleEntityDialog.getNameTextField().getText();
                 PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(packageName+entitySimpleName, GlobalSearchScope.projectScope(project));
@@ -78,6 +71,8 @@ public class NewSingleRootEntityAction extends AnAction {
                                 rootEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
                             }
                         }
+                        ApiClassCreator.createApiClasses(project,component,entitySimpleName);
+                        ServiceCreator.createService(project,component,entitySimpleName);
                         new OpenFileDescriptor(project, rootEntity.getContainingFile().getVirtualFile()).navigate(true);
                     }
                 });

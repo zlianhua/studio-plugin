@@ -3,9 +3,8 @@ package com.ai.abc.studio.plugin.action;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.ImportFieldsFromDBTableDialog;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.plugin.util.EntityCreator;
-import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Column;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -46,7 +45,7 @@ public class ImportFieldsFromDBTableAction extends AnAction {
         PsiElement element = PsiUtilBase.getElementAtCaret(editor);
         PsiClass psiClass = PsiTreeUtil.getParentOfType(element, PsiClass.class);
         try {
-            ComponentDefinition component = FileCreateHelper.loadComponent(project);
+            ComponentDefinition component = ComponentCreator.loadComponent(project);
             ImportFieldsFromDBTableDialog dialog = new ImportFieldsFromDBTableDialog(component, psiClass.getName());
             if (dialog.showAndGet()) {
                 int selectedRow = dialog.getDbTableTable().getSelectedRow();

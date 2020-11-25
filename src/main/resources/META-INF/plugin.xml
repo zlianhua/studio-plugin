@@ -40,10 +40,16 @@
         <action id="com.ai.abc.studio.plugin.action.NewSingleEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleEntityAction" text="实体对象成员" description="新建实体对象成员">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
+        <action id="com.ai.abc.studio.plugin.action.CreateRepositoryAction" class="com.ai.abc.studio.plugin.action.CreateRepositoryAction" text="生成Repository" description="生成Repository">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
         <action id="com.ai.abc.studio.plugin.action.ExtractToInterfaceAction" class="com.ai.abc.studio.plugin.action.ExtractToInterfaceAction" text="抽取业务方法到接口" description="抽取业务方法到接口">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
         <action id="com.ai.abc.studio.plugin.action.CreateRestProxyAction" class="com.ai.abc.studio.plugin.action.CreateRestProxyAction" text="生成Controller和Proxy" description="生成Controller和Proxy">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
+        </action>
+        <action id="com.ai.abc.studio.plugin.action.CreateUnitTestAction" class="com.ai.abc.studio.plugin.action.CreateUnitTestAction" text="生成单元测试" description="生成单元测试">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first" />
         </action>
         <action id="com.ai.abc.studio.plugin.action.MockEntityJsonAction" class="com.ai.abc.studio.plugin.action.MockEntityJsonAction" text="生成实体模拟Json数据" description="生成实体模拟Json数据">

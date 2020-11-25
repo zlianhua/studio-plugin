@@ -1,19 +1,21 @@
 package com.ai.abc.studio.plugin.util;
 
 import com.ai.abc.studio.model.ComponentDefinition;
-import com.ai.abc.studio.plugin.file.FileCreateHelper;
+import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
+import com.ai.abc.studio.util.MemoryFile;
 import com.intellij.lang.jvm.JvmParameter;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
-import com.intellij.psi.impl.file.PsiDirectoryFactory;
 import com.intellij.psi.search.GlobalSearchScope;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -21,11 +23,17 @@ import java.util.List;
 
 public class RestControllerCreator {
     public static PsiClass createRestController(Project project, ComponentDefinition component, String className){
-        Path controllerPath = Paths.get(project.getBasePath()+ File.separator+ FileCreateHelper.getRestControllerPath(component));
+        Path controllerPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestControllerPath(component));
+        VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(controllerPath);
+        if(null==apiVirtualFile){
+            createControllerPath(component);
+            apiVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(controllerPath);
+        }
         List<String> packageImports = new ArrayList<>();
         packageImports.add(EntityUtil.getComponentPackageName(component)+".model");
         packageImports.add(EntityUtil.getComponentPackageName(component)+".api");
         packageImports.add("java.util");
+        packageImports.add("com.ai.abc.api.model");
         packageImports.add("org.springframework.http");
         packageImports.add("org.springframework.beans.factory.annotation");
         packageImports.add("org.springframework.web.bind.annotation");
@@ -39,7 +47,7 @@ public class RestControllerCreator {
         List<String> classAnnotations = new ArrayList<>();
         classAnnotations.add("@Slf4j");
 
-        PsiClass controller = PsJavaFileHelper.createPsiClass(project,controllerPath,className,packageImports,classImports,classAnnotations);
+        PsiClass controller = PsJavaFileHelper.createPsiClass(project,apiVirtualFile,className,packageImports,classImports,classAnnotations,null);
         return controller;
     }
 
@@ -144,5 +152,42 @@ public class RestControllerCreator {
             file.getImportList().add(importStatement);
         }
         codeStyleManager.shortenClassReferences(file);
+    }
+
+    public static void createControllerPath(ComponentDefinition component){
+        StringBuilder restPath = ComponentCreator.getPackagePath(component)
+                .append(File.separator)
+                .append(component.getSimpleName().toLowerCase())
+                .append("-rest".toLowerCase());
+        File rest = new File(restPath.toString());
+        if (!rest.exists()) {
+            rest.mkdirs();
+        }
+        StringBuilder restSrcPkgPath = ComponentCreator.componentSrcPkg(component, restPath)
+                .append(File.separator)
+                .append("rest");
+        File restSrcPkg = new File(restSrcPkgPath.toString());
+        if (!restSrcPkg.exists()) {
+            restSrcPkg.mkdirs();
+        }
+    }
+
+    public static void createRestModule(ComponentDefinition component) throws Exception{
+        createControllerPath(component);
+        MemoryFile restPom = ComponentVmUtil.createRestPom(component);
+        StringBuilder fileName = ComponentCreator.getPackagePath(component)
+                .append(File.separator)
+                .append(restPom.fileName);
+        Path filePath = Paths.get(fileName.toString());
+        if(filePath.getParent() != null) {
+            Files.createDirectories(filePath.getParent());
+        }
+        Files.write(filePath,restPom.content);
+    }
+
+    public static String getControllerClassFullName(Project project) throws Exception{
+        ComponentDefinition component = ComponentCreator.loadComponent(project);
+        String packageName = EntityUtil.getComponentPackageName(component);
+        return packageName+".rest."+component.getSimpleName()+"Controller";
     }
 }
