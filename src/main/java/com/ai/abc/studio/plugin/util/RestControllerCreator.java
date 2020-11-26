@@ -25,7 +25,7 @@ import java.util.List;
  * 2020.11
  */
 public class RestControllerCreator {
-    public static PsiClass createRestController(Project project, ComponentDefinition component, String className){
+    public static PsiClass createRestController(Project project, ComponentDefinition component, String className) throws Exception{
         Path controllerPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestControllerPath(component));
         VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(controllerPath);
         if(null==apiVirtualFile){

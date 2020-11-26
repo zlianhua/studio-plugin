@@ -9,9 +9,11 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 /**
@@ -58,6 +60,7 @@ public class MockEntityJsonAction extends AnAction {
             JSONObject jsonModel = ComponentCreator.generatePsiClassJson(project,model,null);
             EntityCreator.saveEntityMockedJson(ComponentCreator.loadComponent(project),model.getName(),jsonModel.toString());
         } catch (Exception ex) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(ex),"生成实体模拟JSON出现错误");
             ex.printStackTrace();
         }
     }

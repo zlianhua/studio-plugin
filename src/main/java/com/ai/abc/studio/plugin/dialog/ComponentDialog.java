@@ -22,7 +22,7 @@ import java.awt.event.ActionListener;
 @Getter
 @Setter
 public class ComponentDialog extends DialogWrapper {
-    private JTextField projectDirectoryTextField = new JTextField("C:/test");
+    private JTextField projectDirectoryTextField = new JTextField("");
     private TextFieldWithBrowseButton projectDirectoryTextFieldWithButton = new TextFieldWithBrowseButton(projectDirectoryTextField, new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -33,8 +33,8 @@ public class ComponentDialog extends DialogWrapper {
         }
     });
     private JTextField groupTextField = new JTextField("com.ai.bss");
-    private JTextField nameTextField = new JTextField("Test");
-    private JTextField descTextField = new JTextField("测试");
+    private JTextField nameTextField = new JTextField("");
+    private JTextField descTextField = new JTextField("");
     private JTextField versionTextField = new JTextField("1.0-SNAPSHOT");
     private JCheckBox isLogicalDeleteCheckBox = new JCheckBox("是否逻辑删除",true);
     private JCheckBox isExtendBaseEntityCheckBox = new JCheckBox("是否继承基础对象",true);

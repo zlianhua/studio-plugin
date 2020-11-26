@@ -1,12 +1,16 @@
 package com.ai.abc.studio.plugin.dialog;
 
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.wm.IdeFocusManager;
 import com.intellij.util.ui.FormBuilder;
+import com.intellij.util.ui.UIUtil;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
+import java.awt.*;
+
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
@@ -39,5 +43,10 @@ public class NewSingleEntityDialog extends DialogWrapper {
                 .addComponent(isOneToManyCheckBox)
                 .getPanel();
         return dialogPanel;
+    }
+
+    @Override
+    public JComponent getPreferredFocusedComponent(){
+        return nameTextField;
     }
 }

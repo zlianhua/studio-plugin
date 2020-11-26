@@ -41,7 +41,7 @@ public class EntityCreator {
         ValueEntity;
     }
 
-    public static PsiClass createEntity(Project project, ComponentDefinition component, String entityName,String tableName,EntityType entityType){
+    public static PsiClass createEntity(Project project, ComponentDefinition component, String entityName,String tableName,EntityType entityType) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         Path modelPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getModelPath(component));
         VirtualFile modelVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(modelPath);
@@ -118,7 +118,7 @@ public class EntityCreator {
         return entityClass;
     }
 
-    public static void createPsiClassFieldsFromTableColumn(Project project, PsiClass psiClass, List<Column> columns, ComponentDefinition component){
+    public static void createPsiClassFieldsFromTableColumn(Project project, PsiClass psiClass, List<Column> columns, ComponentDefinition component) throws Exception{
         List<String> abstractEntityFieldNames = new ArrayList<>();
         if(component.isExtendsAbstractEntity()){
             abstractEntityFieldNames = ComponentCreator.getAbstractEntityFields();
@@ -214,7 +214,7 @@ public class EntityCreator {
         return packageName+".model."+entitySimpleName;
     }
 
-    public static PsiField findPrimaryField(Project project,String entityName,ComponentDefinition component){
+    public static PsiField findPrimaryField(Project project,String entityName,ComponentDefinition component) throws Exception{
         Path modelPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getModelPath(component));
         VirtualFile modelVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(modelPath);
         PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(modelVirtualFile));
@@ -252,6 +252,11 @@ public class EntityCreator {
                         }
                     }
                 }
+            }
+        }
+        if(rootEntities.isEmpty()){
+            for(PsiClass entityClass : entityClasses){
+                rootEntities.add(entityClass);
             }
         }
         return rootEntities;

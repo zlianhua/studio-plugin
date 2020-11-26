@@ -10,10 +10,12 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 /**
@@ -57,14 +59,20 @@ public class ExtractToInterfaceAction extends AnAction {
             WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                 @Override
                 public void run() {
-                    PsiClass intfPsiClass = JavaPsiFacade.getInstance(project).findClass(interfaceClsName, GlobalSearchScope.projectScope(project));
-                    if (null == intfPsiClass) {
-                        intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
+                    try {
+                        PsiClass intfPsiClass = JavaPsiFacade.getInstance(project).findClass(interfaceClsName, GlobalSearchScope.projectScope(project));
+                        if (null == intfPsiClass) {
+                            intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
+                        }
+                        ApiClassCreator.addMethodToInterfaceClass(intfPsiClass, methods, elementFactory, codeStyleManager);
+                    } catch (Exception exception) {
+                        Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"抽取方法到api出现错误");
+                        exception.printStackTrace();
                     }
-                    ApiClassCreator.addMethodToInterfaceClass(intfPsiClass, methods, elementFactory, codeStyleManager);
                 }
             });
         }catch(Exception e1){
+            Messages.showErrorDialog(ExceptionUtil.getMessage(e1),"抽取方法到api出现错误");
             e1.printStackTrace();
         }
     }

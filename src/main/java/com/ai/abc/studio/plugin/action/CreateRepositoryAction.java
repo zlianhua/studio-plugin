@@ -10,11 +10,13 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.JavaDirectoryService;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiPackage;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
@@ -57,10 +59,16 @@ public class CreateRepositoryAction extends AnAction {
             WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                 @Override
                 public void run() {
-                    RepositoryCreator.createRepository(project,component,mainFileName);
+                    try {
+                        RepositoryCreator.createRepository(project,component,mainFileName,e);
+                    } catch (Exception exception) {
+                        Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"创建Repository出现错误");
+                        exception.printStackTrace();
+                    }
                 }
             });
         } catch (Exception exception) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"创建Repository出现错误");
             exception.printStackTrace();
         }
     }

@@ -4,6 +4,7 @@ import com.ai.abc.core.annotations.AiAbcMemberEntity;
 import com.ai.abc.core.annotations.AiAbcRootEntity;
 import com.ai.abc.core.annotations.AiAbcValueEntity;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.WindowManager;
@@ -93,7 +94,7 @@ public class PsJavaFileHelper {
         return source;
     }
 
-    public static PsiClass getEntity(PsiPackage psiPackage, String fileName){
+    public static PsiClass getEntity(PsiPackage psiPackage, String fileName) throws Exception{
         PsiClass[] allClasses = psiPackage.getClasses();
         for(PsiClass acls : allClasses){
             if(acls.getQualifiedName().endsWith(fileName)){
@@ -132,7 +133,7 @@ public class PsJavaFileHelper {
         }
         return false;
     }
-    public static PsiClass createPsiClass(Project project,VirtualFile controllerVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName){
+    public static PsiClass createPsiClass(Project project,VirtualFile controllerVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName) throws Exception{
         PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(controllerVirtualFile);
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         PsiClass psiClass = JavaDirectoryService.getInstance().createClass(directory, className);
@@ -145,40 +146,22 @@ public class PsJavaFileHelper {
         }
         if (null!=classImports) {
             for(String classImport : classImports){
-                PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project)));
-                file.getImportList().add(importStatement);
-            }
-        }
-        if (null!=classAnnotations) {
-            for(String annotation : classAnnotations){
-                addClassAnnotation(psiClass,annotation);
-            }
-        }
-        if(!StringUtils.isEmpty(parentClassName)){
-            psiClass.getExtendsList().add(elementFactory.createReferenceFromText(parentClassName,psiClass));
-        }
-        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
-        codeStyleManager.shortenClassReferences(file);
-        return psiClass;
-    }
-
-    public static PsiClass createInterface(Project project,VirtualFile apiVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName){
-        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(apiVirtualFile);
-        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
-        PsiClass psiClass = JavaDirectoryService.getInstance().createInterface(directory, className);
-        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
-
-        if (null!=packageImports) {
-            for(String packageImport: packageImports){
-                PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
-                file.getImportList().add(importStatement);
-            }
-        }
-        if (null!=classImports) {
-            for(String classImport : classImports){
-                PsiClass importCls = JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project));
-                if(null!=importCls){
-                    PsiImportStatement importStatement = elementFactory.createImportStatement(importCls);
+                PsiClass aImportCls = findPsiClass(project,classImport).getPsiClass();
+                if(null==aImportCls){
+                    for(int i=0;i<10;i++){
+                        if(null==aImportCls){
+                            aImportCls = JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project));
+                            if(null!=aImportCls){
+                                break;
+                            }
+                        }
+                    }
+                    if(null==aImportCls){
+                        throw new Exception("findClass"+aImportCls+"出错！");
+                    }
+                }
+                if(null!=aImportCls){
+                    PsiImportStatement importStatement = elementFactory.createImportStatement(aImportCls);
                     file.getImportList().add(importStatement);
                 }
             }
@@ -194,5 +177,73 @@ public class PsJavaFileHelper {
         JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
         codeStyleManager.shortenClassReferences(file);
         return psiClass;
+    }
+
+    public static PsiClass createInterface(Project project,VirtualFile apiVirtualFile,String className,List<String> packageImports,List<String> classImports,List<String> classAnnotations,String parentClassName) throws Exception{
+        PsiDirectory directory = PsiDirectoryFactory.getInstance(project).createDirectory(apiVirtualFile);
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiClass psiClass = JavaDirectoryService.getInstance().createInterface(directory, className);
+        PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
+
+        if (null!=packageImports) {
+            for(String packageImport: packageImports){
+                PsiImportStatement importStatement = elementFactory.createImportStatementOnDemand(packageImport);
+                file.getImportList().add(importStatement);
+            }
+        }
+        if (null!=classImports) {
+            for(String classImport : classImports){
+                PsiClass aImportCls = findPsiClass(project,classImport).getPsiClass();
+                if(null==aImportCls){
+                    for(int i=0;i<10;i++){
+                        if(null==aImportCls){
+                            aImportCls = JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project));
+                            if(null!=aImportCls){
+                                break;
+                            }
+                        }
+                    }
+                    if(null==aImportCls){
+                        throw new Exception("findClass"+aImportCls+"出错！");
+                    }
+                }
+                if(null!=aImportCls){
+                    PsiImportStatement importStatement = elementFactory.createImportStatement(aImportCls);
+                    file.getImportList().add(importStatement);
+                }
+            }
+        }
+        if (null!=classAnnotations) {
+            for(String annotation : classAnnotations){
+                addClassAnnotation(psiClass,annotation);
+            }
+        }
+        if(!StringUtils.isEmpty(parentClassName)){
+            psiClass.getExtendsList().add(elementFactory.createReferenceFromText(parentClassName,psiClass));
+        }
+        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
+        codeStyleManager.shortenClassReferences(file);
+        return psiClass;
+    }
+
+    public static PsiClassGetterHelper findPsiClass(Project project,String classImport){
+        PsiClassGetterHelper psiClassGetterHelper = new PsiClassGetterHelper();
+        DumbService.getInstance(project).runWhenSmart(() -> {
+            PsiClass returnClass = JavaPsiFacade.getInstance(project).findClass(classImport,GlobalSearchScope.allScope(project));
+            psiClassGetterHelper.setPsiClass(returnClass);
+        });
+        return psiClassGetterHelper;
+    }
+
+    public static class PsiClassGetterHelper {
+        private PsiClass psiClass;
+
+        public void setPsiClass(PsiClass aPsiClass){
+            this.psiClass = aPsiClass;
+        }
+
+        public PsiClass getPsiClass(){
+            return this.psiClass;
+        }
     }
 }

@@ -4,12 +4,14 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.MemoryFile;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.search.GlobalSearchScope;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.thymeleaf.util.StringUtils;
 
 import java.io.File;
@@ -53,7 +55,7 @@ public class ServiceCreator {
         Files.write(filePath,servicePom.content);
     }
 
-    public static void createService(Project project,ComponentDefinition component,String rootEntityName){
+    public static void createService(Project project,ComponentDefinition component,String rootEntityName) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         Path servicePath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getServicePath(component));
         VirtualFile serviceVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(servicePath);
@@ -74,19 +76,19 @@ public class ServiceCreator {
         classAnnotations.add("@Service");
 
         PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(serviceVirtualFile));
-        PsiClass command = PsJavaFileHelper.getEntity(psiPackage,rootEntityName+"ServiceImpl");
+        PsiClass command = PsJavaFileHelper.getEntity(psiPackage,rootEntityName+"CommandImpl");
         if(null==command){
-            command = PsJavaFileHelper.createPsiClass(project,serviceVirtualFile,rootEntityName+"ServiceImpl",packageImports,classImports,classAnnotations,null);
-            command.getImplementsList().add(elementFactory.createReferenceFromText(rootEntityName+"Service",command));
+            command = PsJavaFileHelper.createPsiClass(project,serviceVirtualFile,rootEntityName+"CommandImpl",packageImports,classImports,classAnnotations,null);
+            command.getImplementsList().add(elementFactory.createReferenceFromText(rootEntityName+"Command",command));
         }
-        PsiClass query = PsJavaFileHelper.getEntity(psiPackage,rootEntityName+"QueryServiceImpl");
+        PsiClass query = PsJavaFileHelper.getEntity(psiPackage,rootEntityName+"QueryImpl");
         if(null==query){
-            query = PsJavaFileHelper.createPsiClass(project,serviceVirtualFile,rootEntityName+"QueryServiceImpl",packageImports,classImports,classAnnotations,null);
-            query.getImplementsList().add(elementFactory.createReferenceFromText(rootEntityName+"QueryService",query));
+            query = PsJavaFileHelper.createPsiClass(project,serviceVirtualFile,rootEntityName+"QueryImpl",packageImports,classImports,classAnnotations,null);
+            query.getImplementsList().add(elementFactory.createReferenceFromText(rootEntityName+"Query",query));
         }
     }
 
-    public static void createCommandMethod(Project project,ComponentDefinition component,PsiClass commandServiceCls,String rootEntityName,String methodName){
+    public static void createCommandMethod(Project project, ComponentDefinition component, PsiClass commandServiceCls, String rootEntityName, String methodName, AnActionEvent e) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         PsiField[] fields = commandServiceCls.getFields();
         boolean hasRootRepository= false;
@@ -100,14 +102,29 @@ public class ServiceCreator {
         }
         if(!hasRootRepository){
             String repositoryPath = EntityUtil.getComponentPackageName(component)+".service.repository."+rootEntityName+"Repository";
-            PsiImportStatement importStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(repositoryPath, GlobalSearchScope.allScope(project)));
+            PsiClass repositoryCls = JavaPsiFacade.getInstance(project).findClass(repositoryPath, GlobalSearchScope.allScope(project));
+            if(null==repositoryCls){
+                repositoryCls = RepositoryCreator.createRepository(project,component,rootEntityName,e);
+            }
+            PsiImportStatement importStatement = elementFactory.createImportStatement(repositoryCls);
             PsiJavaFile file = (PsiJavaFile)commandServiceCls.getContainingFile();
-            file.getImportList().add(importStatement);
+            if(null==file.getImportList().findSingleImportStatement(rootEntityName+"Repository")){
+                file.getImportList().add(importStatement);
+            }
 
-            PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(rootEntityName+"Repository",null);
-            List<String> annotations = new ArrayList<>();
-            annotations.add("@Autowired");
-            PsJavaFileHelper.addField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository",null,apiType,annotations);
+            PsiClass autoWired = JavaPsiFacade.getInstance(project).findClass(Autowired.class.getName(), GlobalSearchScope.allScope(project));
+            importStatement = elementFactory.createImportStatement(autoWired);
+            if(null==file.getImportList().findSingleImportStatement("Autowired")){
+                file.getImportList().add(importStatement);
+            }
+
+            PsiField repository = PsJavaFileHelper.findField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository");
+            if(null==repository){
+                List<String> annotations = new ArrayList<>();
+                PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(rootEntityName+"Repository",null);
+                annotations.add("@Autowired");
+                PsJavaFileHelper.addField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository",null,apiType,annotations);
+            }
         }
         StringBuilder methodStr = new StringBuilder();
         methodStr.append("public CommonResponse<").append(rootEntityName).append("> ").append(methodName).append("(CommonRequest<").append(rootEntityName).append("> request) throws Exception{\n")

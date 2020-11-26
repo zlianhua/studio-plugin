@@ -14,8 +14,10 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
+import com.intellij.util.ExceptionUtil;
 import org.codehaus.plexus.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +30,13 @@ public class CreateEntityFromDBTableAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
-        VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
+        VirtualFile virtualFile = null;
+        try {
+            virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
+        } catch (Exception exception) {
+            e.getPresentation().setEnabledAndVisible(false);
+            return;
+        }
         //获取当前类文件的路径
         String classPath = virtualFile.getPath();
         String modelPackageStarts=project.getBasePath();
@@ -59,15 +67,21 @@ public class CreateEntityFromDBTableAction extends AnAction {
                    WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                        @Override
                        public void run() {
-                           PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,null);
-                           if(null!=columns && !columns.isEmpty()){
-                               EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+                           try {
+                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,null);
+                               if(null!=columns && !columns.isEmpty()){
+                                   EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+                               }
+                           } catch (Exception exception) {
+                               Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");
+                               exception.printStackTrace();
                            }
                        }
                    });
                }
             }
         } catch (Exception exception) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");
             exception.printStackTrace();
         }
 

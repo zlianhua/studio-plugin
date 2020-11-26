@@ -14,11 +14,13 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 
@@ -77,54 +79,59 @@ public class NewSingleEntityAction extends AnAction {
                 WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                     @Override
                     public void run() {
-                        PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
+                        try {
+                            PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
 //                        PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
-                        JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
-                        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
-                        String refFieldName = StringUtils.uncapitalize(simpleEntityName);
-                        PsiType fieldType;
-                        List<String> annotations = new ArrayList<>();
-                        if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
-                            annotations.add("@OneToMany(cascade= CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)");
-                            refFieldName = refFieldName+"List";
-                            fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText("List<"+simpleEntityName+">",null);
-                        }else{
-                            fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(simpleEntityName,null);
-                        }
-                        String memFileName = CamelCaseStringUtil.camelCase2UnderScore(simpleEntityName);
-                        annotations.add("@JoinColumn(name=\""+memFileName.toUpperCase()+"_ID\")");
-                        PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
-                        PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
-                        PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
-                        PsiClass listClass = JavaPsiFacade.getInstance(project).findClass("java.util.List", GlobalSearchScope.allScope(project));
-                        PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
-                        file.getImportList().add(importStatement);
-                        codeStyleManager.shortenClassReferences(file);
-                                                List<String> relFieldAnnos = new ArrayList<>();
-
-                        relFieldAnnos.add("@ManyToOne");
-                        String columnName = CamelCaseStringUtil.camelCase2UnderScore(mainFileName);
-                        relFieldAnnos.add("@JoinColumn(name =\""+columnName.toUpperCase()+"_ID\", insertable = false, updatable = false)");
-                        relFieldAnnos.add("@JsonBackReference");
-                        PsiClass memberEntity = EntityCreator.createEntity(project,component,simpleEntityName,"", EntityCreator.EntityType.MemberEntity);
-                        if(newSingleEntityDialog.getIsAbstractCheckBox().isSelected()){
-                            if (!memberEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
-                                memberEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                            JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
+                            PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+                            String refFieldName = StringUtils.uncapitalize(simpleEntityName);
+                            PsiType fieldType;
+                            List<String> annotations = new ArrayList<>();
+                            if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
+                                annotations.add("@OneToMany(cascade= CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)");
+                                refFieldName = refFieldName+"List";
+                                fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText("List<"+simpleEntityName+">",null);
+                            }else{
+                                fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(simpleEntityName,null);
                             }
-                        }
-                        PsiJavaFile memberEntityFile = (PsiJavaFile)memberEntity.getContainingFile();
-                        PsiImportList imports = memberEntityFile.getImportList();
-                        if(null==imports.findSingleImportStatement(JsonBackReference.class.getName())){
-                            PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(JsonBackReference.class.getName(),GlobalSearchScope.allScope(project)));
-                            imports.add(JsonBackImportStatement);
-                        }
-                        PsiType relFieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName,null);
-                        PsJavaFileHelper.addField(memberEntity,StringUtils.uncapitalize(mainFileName),null,relFieldType,relFieldAnnos);
+                            String memFileName = CamelCaseStringUtil.camelCase2UnderScore(simpleEntityName);
+                            annotations.add("@JoinColumn(name=\""+memFileName.toUpperCase()+"_ID\")");
+                            PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
+                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
+                            PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
+                            PsiClass listClass = JavaPsiFacade.getInstance(project).findClass("java.util.List", GlobalSearchScope.allScope(project));
+                            PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
+                            file.getImportList().add(importStatement);
+                            codeStyleManager.shortenClassReferences(file);
+                            List<String> relFieldAnnos = new ArrayList<>();
 
-                        new OpenFileDescriptor(project, memberEntityFile.getVirtualFile()).navigate(true);
+                            relFieldAnnos.add("@ManyToOne");
+                            String columnName = CamelCaseStringUtil.camelCase2UnderScore(mainFileName);
+                            relFieldAnnos.add("@JoinColumn(name =\""+columnName.toUpperCase()+"_ID\", insertable = false, updatable = false)");
+                            relFieldAnnos.add("@JsonBackReference");
+                            PsiClass memberEntity = EntityCreator.createEntity(project,component,simpleEntityName,"", EntityCreator.EntityType.MemberEntity);
+                            if(newSingleEntityDialog.getIsAbstractCheckBox().isSelected()){
+                                if (!memberEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
+                                    memberEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                                }
+                            }
+                            PsiJavaFile memberEntityFile = (PsiJavaFile)memberEntity.getContainingFile();
+                            PsiImportList imports = memberEntityFile.getImportList();
+                            if(null==imports.findSingleImportStatement(JsonBackReference.class.getName())){
+                                PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(JsonBackReference.class.getName(),GlobalSearchScope.allScope(project)));
+                                imports.add(JsonBackImportStatement);
+                            }
+                            PsiType relFieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName,null);
+                            PsJavaFileHelper.addField(memberEntity,StringUtils.uncapitalize(mainFileName),null,relFieldType,relFieldAnnos);
+                            new OpenFileDescriptor(project, memberEntityFile.getVirtualFile()).navigate(true);
+                        } catch (Exception exception) {
+                            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"新建实体成员出现错误");
+                            exception.printStackTrace();
+                        }
                     }
                 });
             } catch (Exception exception) {
+                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"新建实体成员出现错误");
                 exception.printStackTrace();
             }
         }

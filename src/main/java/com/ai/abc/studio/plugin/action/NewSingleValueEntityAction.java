@@ -12,9 +12,11 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 
@@ -61,28 +63,35 @@ public class NewSingleValueEntityAction extends AnAction {
                 WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                     @Override
                     public void run() {
-                        String refFieldName = StringUtils.uncapitalize(simpleEntityName);
-                        PsiType fieldType;
-                        if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
-                            refFieldName = refFieldName+"List";
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText("List<"+simpleEntityName+">",null);
-                        }else{
-                            fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText(simpleEntityName,null);
-                        }
-                        PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
-                        List<String> annotations = new ArrayList<>();
-                        annotations.add("@Convert(converter = EntityToJsonConverter.class)");
-                        annotations.add("@Lob");
-                        PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
-                        PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity);
-                        if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
-                            if (!valueEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
-                                valueEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                        try {
+                            String refFieldName = StringUtils.uncapitalize(simpleEntityName);
+                            PsiType fieldType;
+                            if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
+                                refFieldName = refFieldName+"List";
+                                fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText("List<"+simpleEntityName+">",null);
+                            }else{
+                                fieldType = new PsiJavaParserFacadeImpl(mainPsiClass.getProject()).createTypeFromText(simpleEntityName,null);
                             }
-                        }new OpenFileDescriptor(project, valueEntity.getContainingFile().getVirtualFile()).navigate(true);
+                            PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
+                            List<String> annotations = new ArrayList<>();
+                            annotations.add("@Convert(converter = EntityToJsonConverter.class)");
+                            annotations.add("@Lob");
+                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
+                            PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity);
+                            if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
+                                if (!valueEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
+                                    valueEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+                                }
+                            }
+                            new OpenFileDescriptor(project, valueEntity.getContainingFile().getVirtualFile()).navigate(true);
+                        } catch (Exception exception) {
+                            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"生成值对象成员出现错误");
+                            exception.printStackTrace();
+                        }
                     }
                 });
             } catch (Exception exception) {
+                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"生成值对象成员出现错误");
                 exception.printStackTrace();
             }
         }

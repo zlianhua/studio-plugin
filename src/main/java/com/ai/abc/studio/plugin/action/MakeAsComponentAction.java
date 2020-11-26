@@ -2,25 +2,40 @@ package com.ai.abc.studio.plugin.action;
 
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
-import com.ai.abc.studio.plugin.util.ComponentCreator;
+import com.ai.abc.studio.plugin.dialog.ComponentDialog;
 import com.ai.abc.studio.plugin.util.*;
-import com.intellij.openapi.actionSystem.*;
-import com.ai.abc.studio.plugin.dialog.*;
-
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.actionSystem.PlatformDataKeys;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.impl.ProjectManagerImpl;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiFile;
 import com.intellij.util.ExceptionUtil;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
  */
-public class NewComponentAction extends AnAction {
+public class MakeAsComponentAction extends AnAction {
+    private Project project;
+    @Override
+    public void update(@NotNull AnActionEvent e) {
+        project = e.getData(PlatformDataKeys.PROJECT);
+        boolean enable = ComponentCreator.isAbcComponentProject(project)?false:true;
+        e.getPresentation().setEnabledAndVisible(enable);
+    }
     @Override
     public void actionPerformed(AnActionEvent e) {
         ComponentDialog componentDialog = new ComponentDialog();
+        componentDialog.getProjectDirectoryTextField().setText(project.getBasePath().replaceFirst("/"+project.getName(),""));
+        componentDialog.getNameTextField().setText(project.getName());
         if (componentDialog.showAndGet()) {
             String componentName = StringUtils.capitalize(componentDialog.getNameTextField().getText());
             ComponentDefinition component = new ComponentDefinition();
@@ -39,19 +54,8 @@ public class NewComponentAction extends AnAction {
             component.setDbConnectProp(dbConnectProp);
             try {
                 ComponentCreator.createAbcDirectory(component);
-                ComponentCreator.createMainPom(component);
-                EntityCreator.createModelModule(component);
-                ServiceCreator.createServiceModule(component);
-                ApiClassCreator.createApiModule(component);
-                RestControllerCreator.createRestModule(component);
-                RestProxyCreator.createRestProxyModule(component);
-                StringBuilder fileName = new StringBuilder()
-                        .append(component.getProjectDirectory())
-                        .append(File.separator)
-                        .append(component.getSimpleName());
-                ProjectManagerImpl.getInstanceEx().loadAndOpenProject(fileName.toString());
             } catch (Exception exception) {
-                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"新建业务构建项目出现错误");
+                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"生成业务构件元数据出现错误");
                 exception.printStackTrace();
             }
         }

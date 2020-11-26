@@ -22,7 +22,7 @@ import java.util.List;
  * 2020.11
  */
 public class ApiClassCreator {
-    public static PsiClass createApiClass(Project project, ComponentDefinition component, String className){
+    public static PsiClass createApiClass(Project project, ComponentDefinition component, String className) throws Exception{
         Path apiPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getApiPath(component));
         VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(apiPath);
         if(null==apiVirtualFile){
@@ -116,9 +116,9 @@ public class ApiClassCreator {
         Files.write(filePath,apiPom.content);
     }
 
-    public static void createApiClasses(Project project, ComponentDefinition component,String rootEntityName){
-        String commandApiName = rootEntityName+"Service";
-        String queryApiName = rootEntityName+"QueryService";
+    public static void createApiClasses(Project project, ComponentDefinition component,String rootEntityName) throws Exception{
+        String commandApiName = rootEntityName+"Command";
+        String queryApiName = rootEntityName+"Query";
         createApiClass(project,component,commandApiName);
         createApiClass(project,component,queryApiName);
     }

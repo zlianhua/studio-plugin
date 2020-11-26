@@ -12,11 +12,13 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.util.PsiUtilBase;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -34,7 +36,8 @@ public class CreateCommandMethodAction extends AnAction {
         String servicePackageStarts = project.getBasePath();
         String servicePackageEnds = project.getName().toLowerCase() + "/service/";
         boolean enable = false;
-        if ((classPath.contains(servicePackageStarts)) && classPath.contains(servicePackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")) {
+        if ((classPath.contains(servicePackageStarts)) && classPath.contains(servicePackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")
+        && classPath.contains("Command")) {
             enable = true;
         }
         e.getPresentation().setEnabledAndVisible(enable);
@@ -63,12 +66,18 @@ public class CreateCommandMethodAction extends AnAction {
                     WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                         @Override
                         public void run() {
-                            ServiceCreator.createCommandMethod(project,component,psiClass,rootEntityName,methodName);
+                            try {
+                                ServiceCreator.createCommandMethod(project,component,psiClass,rootEntityName,methodName,e);
+                            } catch (Exception exception) {
+                                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"生成命令方法出现错误");
+                                exception.printStackTrace();
+                            }
                         }
                     });
                 }
             }
         }catch (Exception exception) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"生成命令方法出现错误");
             exception.printStackTrace();
         }
     }

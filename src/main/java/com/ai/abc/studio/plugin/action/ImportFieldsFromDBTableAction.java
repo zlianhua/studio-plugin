@@ -14,10 +14,12 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.util.PsiUtilBase;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -62,12 +64,18 @@ public class ImportFieldsFromDBTableAction extends AnAction {
                     WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                         @Override
                         public void run() {
-                            EntityCreator.createPsiClassFieldsFromTableColumn(project, psiClass, columns, component);
+                            try {
+                                EntityCreator.createPsiClassFieldsFromTableColumn(project, psiClass, columns, component);
+                            } catch (Exception exception) {
+                                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库表导入属性出现错误");
+                                exception.printStackTrace();
+                            }
                         }
                     });
                 }
             }
         } catch (Exception exception) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库表导入属性出现错误");
             exception.printStackTrace();
         }
     }

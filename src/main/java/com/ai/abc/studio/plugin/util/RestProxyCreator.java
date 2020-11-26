@@ -26,7 +26,7 @@ import java.util.List;
  * 2020.11
  */
 public class RestProxyCreator {
-    public static PsiClass createRestProxy(Project project, ComponentDefinition component, String proxyName){
+    public static PsiClass createRestProxy(Project project, ComponentDefinition component, String proxyName) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         String serviceName = proxyName.replace("RestProxy","");
         Path restProxyPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestProxyPath(component));
@@ -92,7 +92,7 @@ public class RestProxyCreator {
         return restProxy;
     }
 
-    public static PsiClass createRestConfig(Project project, ComponentDefinition component) {
+    public static PsiClass createRestConfig(Project project, ComponentDefinition component)  throws Exception{
         Path restProxyPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getRestProxyPath(component));
         VirtualFile apiVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(restProxyPath);
         List<String> packageImports = new ArrayList<>();
@@ -140,12 +140,14 @@ public class RestProxyCreator {
                     .append(method.getName())
                     .append("(");
             JvmParameter[] parameters= method.getParameters();
+            String commonRequestParamName = rootEntityVar;
             for(JvmParameter parameter : parameters){
                 String paramName = parameter.getName();
                 String paramType = parameter.getType().toString();
                 paramType = paramType.replace("PsiType:", "");
                 boolean isCommonRequestParam =paramType.startsWith("CommonRequest<")?true:false;
                 if(isCommonRequestParam){
+                    commonRequestParamName = paramName;
                     useCommonRequest = true;
                 }
                 if(!isCommonRequestParam && (isGet || method.getName().startsWith("delete"))){
@@ -213,13 +215,14 @@ public class RestProxyCreator {
                     methodStr.append(paramMap)
                             .append("    restTemplate.delete(url,params);");
                 }else {
+
                     methodStr.append("    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON_UTF8));\n")
                             .append("    headers.setContentType(MediaType.APPLICATION_JSON_UTF8);\n");
                     String requestType = useCommonRequest?"CommonRequest<"+rootEntitySimpleName+">":rootEntitySimpleName;
                     String responseType = useCommonRequest?"CommonResponse":"String";
-                    methodStr.append("    HttpEntity<" + requestType + "> request = new HttpEntity<>(" + rootEntityVar + ",headers);\n");
+                    methodStr.append("    HttpEntity<" + requestType + "> httpRequestEntity = new HttpEntity<>(" + commonRequestParamName + ",headers);\n");
                     if(!returnTypeName.equals("void")){
-                        methodStr.append("    ResponseEntity<"+responseType+"> resp = restTemplate.postForEntity(url,request,"+responseType+".class);\n")
+                        methodStr.append("    ResponseEntity<"+responseType+"> resp = restTemplate.postForEntity(url,httpRequestEntity,"+responseType+".class);\n")
                                 .append("    return resp.getBody();\n");
                     }else{
                         methodStr.append("    restTemplate.postForEntity(url,request,String.class);\n");

@@ -6,6 +6,8 @@ import com.ai.abc.studio.plugin.dialog.ComponentDBConfigDialog;
 import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.ui.Messages;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
@@ -41,6 +43,7 @@ public class ComponentDBConfigAction extends AnAction {
                 ComponentCreator.saveMetaData(component);
             }
         } catch (Exception exception) {
+            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"配置数据库连接信息出现错误");
             exception.printStackTrace();
         }
     }

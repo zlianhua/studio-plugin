@@ -6,7 +6,9 @@ import com.ai.abc.studio.util.ComponentVmUtil;
 import com.ai.abc.studio.util.EntityUtil;
 import com.ai.abc.studio.util.MemoryFile;
 import com.intellij.lang.jvm.JvmParameter;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
@@ -15,6 +17,7 @@ import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.ProjectScope;
 import org.springframework.util.StringUtils;
 
+import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,11 +30,11 @@ import java.util.List;
  * 2020.11
  */
 public class UnitTestCreator {
-    public static PsiClass createUnitTest(Project project, ComponentDefinition component, PsiClass apiClass){
+    public static PsiClass createUnitTest(Project project, ComponentDefinition component, PsiClass apiClass, AnActionEvent e) throws Exception{
         String apiServiceName = apiClass.getName();
         String apiServiceNameVar = StringUtils.uncapitalize(apiServiceName);
-        String rootEntityName = apiServiceName.replace("QueryService","");
-        rootEntityName = apiServiceName.replace("Service","");
+        String rootEntityName = apiServiceName.replace("Query","");
+        rootEntityName = apiServiceName.replace("Command","");
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         Path testPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getServiceUnitTestPath(component));
         VirtualFile unitTestVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(testPath);
@@ -39,41 +42,51 @@ public class UnitTestCreator {
             createUnitTestPath(component);
             unitTestVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(testPath);
         }
-        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(unitTestVirtualFile));
-        PsiClass unitTestClass = PsJavaFileHelper.getEntity(psiPackage,apiServiceName+"Test");
-        if(null==unitTestClass){
-            List<String> packageImports = new ArrayList<>();
-            packageImports.add(EntityUtil.getComponentPackageName(component)+".model");
-            packageImports.add(EntityUtil.getComponentPackageName(component)+".api");
-            packageImports.add("java.util");
-            packageImports.add("com.ai.abc.api.model");
-
-            List<String> classImports = new ArrayList<>();
-            classImports.add(org.springframework.stereotype.Service.class.getName());
-            classImports.add("org.junit.Test");
-            classImports.add("org.junit.runner.RunWith");
-            classImports.add("org.springframework.beans.factory.annotation.Autowired");
-            classImports.add("org.springframework.boot.test.context.SpringBootTest");
-            classImports.add("org.springframework.test.context.junit4.SpringRunner");
-            classImports.add("lombok.extern.slf4j.Slf4j");
-            classImports.add("com.ai.abc.util.JsonUtils");
-            classImports.add("com.fasterxml.jackson.databind.ObjectMapper");
-
-            List<String> classAnnotations = new ArrayList<>();
-            classAnnotations.add("@Slf4j");
-            classAnnotations.add("@RunWith(SpringRunner.class)");
-            classAnnotations.add("@SpringBootTest");
-
-            unitTestClass = PsJavaFileHelper.createPsiClass(project,unitTestVirtualFile,apiServiceName+"Test",packageImports,classImports,classAnnotations,null);
-
-            PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(apiServiceName,null);
-            List<String> annotations = new ArrayList<>();
-            annotations.add("@Autowired");
-            PsJavaFileHelper.addField(unitTestClass,apiServiceNameVar,null,apiType,annotations);
-
-            PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("ObjectMapper",null);
-            PsJavaFileHelper.addField(unitTestClass,"mapper","new ObjectMapper()",mapperType,null);
+        PsiFile[] files = FilenameIndex.getFilesByName(project,apiServiceName+"Test.java", ProjectScope.getProjectScope(project));
+        if(null!=files && files.length>0){
+            JComponent source = PsJavaFileHelper.getDialogSource(e);
+            if (Messages.showConfirmationDialog(source,
+                    rootEntityName + "Repository" + "已经存在，是否覆盖已有对象？",
+                    "Repository已经存在",
+                    "覆盖",
+                    "取消") == Messages.NO) {
+                return null;
+            }else{
+                //delete
+                files[0].delete();
+            }
         }
+
+        List<String> packageImports = new ArrayList<>();
+        packageImports.add(EntityUtil.getComponentPackageName(component)+".model");
+        packageImports.add(EntityUtil.getComponentPackageName(component)+".api");
+        packageImports.add("java.util");
+        packageImports.add("com.ai.abc.api.model");
+
+        List<String> classImports = new ArrayList<>();
+        classImports.add("org.junit.Test");
+        classImports.add("org.junit.runner.RunWith");
+        classImports.add("org.springframework.beans.factory.annotation.Autowired");
+        classImports.add("org.springframework.boot.test.context.SpringBootTest");
+        classImports.add("org.springframework.test.context.junit4.SpringRunner");
+        classImports.add("lombok.extern.slf4j.Slf4j");
+        classImports.add("com.ai.abc.util.JsonUtils");
+        classImports.add("com.fasterxml.jackson.databind.ObjectMapper");
+
+        List<String> classAnnotations = new ArrayList<>();
+        classAnnotations.add("@Slf4j");
+        classAnnotations.add("@RunWith(SpringRunner.class)");
+        classAnnotations.add("@SpringBootTest");
+
+        PsiClass unitTestClass = PsJavaFileHelper.createPsiClass(project,unitTestVirtualFile,apiServiceName+"Test",packageImports,classImports,classAnnotations,null);
+
+        PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(apiServiceName,null);
+        List<String> annotations = new ArrayList<>();
+        annotations.add("@Autowired");
+        PsJavaFileHelper.addField(unitTestClass,apiServiceNameVar,null,apiType,annotations);
+
+        PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("ObjectMapper",null);
+        PsJavaFileHelper.addField(unitTestClass,"mapper","new ObjectMapper()",mapperType,null);
 
         StringBuilder entityJsonPath = new StringBuilder().append("/").append(rootEntityName).append(".json");
         PsiMethod[] apiMethods = apiClass.getMethods();
@@ -139,7 +152,7 @@ public class UnitTestCreator {
         return unitTestClass;
     }
 
-    public static void createUnitTestPath(ComponentDefinition component){
+    public static void createUnitTestPath(ComponentDefinition component) throws Exception{
         StringBuilder restPath = ComponentCreator.getPackagePath(component)
                 .append(File.separator)
                 .append(component.getSimpleName().toLowerCase())
@@ -173,7 +186,7 @@ public class UnitTestCreator {
         }
     }
 
-    public static PsiClass createTestApp(Project project, ComponentDefinition component){
+    public static PsiClass createTestApp(Project project, ComponentDefinition component) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         Path testPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getTestAppPath(component));
         VirtualFile testAppVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(testPath);
@@ -182,10 +195,9 @@ public class UnitTestCreator {
             testAppVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(testPath);
         }
         String testAppName = "Test"+component.getSimpleName()+"App";
-        PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(testAppVirtualFile));
-        PsiClass testAppClass = PsJavaFileHelper.getEntity(psiPackage,testAppName);
-        if(null!=testAppClass){
-            return testAppClass;
+        PsiFile[] files = FilenameIndex.getFilesByName(project,testAppName+".java", ProjectScope.getProjectScope(project));
+        if(null!=files && files.length>0){
+            return null;
         }
 
         List<String> packageImports = new ArrayList<>();
@@ -198,7 +210,7 @@ public class UnitTestCreator {
         List<String> classAnnotations = new ArrayList<>();
         classAnnotations.add("@SpringBootApplication(scanBasePackages = {\""+component.getBasePackageName()+"\"})");
 
-        testAppClass = PsJavaFileHelper.createPsiClass(project,testAppVirtualFile,testAppName,packageImports,classImports,classAnnotations,null);
+        PsiClass testAppClass = PsJavaFileHelper.createPsiClass(project,testAppVirtualFile,testAppName,packageImports,classImports,classAnnotations,null);
         StringBuilder methodStr=new StringBuilder();
         methodStr.append("public static void main(String[] args) throws Exception {\n")
                 .append("    SpringApplication.run(").append(testAppName).append(".class, args);\n")

@@ -11,8 +11,10 @@ import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
+import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
@@ -50,12 +52,18 @@ public class CreateUnitTestAction extends AnAction {
             WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                 @Override
                 public void run() {
-                    UnitTestCreator.createTestApp(project,component);
-                    UnitTestCreator.createTestAppPropFile(project, component);
-                    UnitTestCreator.createUnitTest(project, component, mainPsiClass);
+                    try {
+                        UnitTestCreator.createTestApp(project,component);
+                        UnitTestCreator.createTestAppPropFile(project, component);
+                        UnitTestCreator.createUnitTest(project, component, mainPsiClass,e);
+                    } catch (Exception exception) {
+                        Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"创建单元测试出现错误");
+                        exception.printStackTrace();
+                    }
                 }
             });
         }catch (Exception e1){
+            Messages.showErrorDialog(ExceptionUtil.getMessage(e1),"创建单元测试出现错误");
             e1.printStackTrace();
         }
     }

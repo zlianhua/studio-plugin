@@ -24,6 +24,10 @@
                 description="new business component">
             <add-to-group group-id="NewProjectOrModuleGroup" anchor="first"/>
         </action>
+        <action id="com.ai.abc.studio.plugin.action.MakeAsComponentAction" class="com.ai.abc.studio.plugin.action.MakeAsComponentAction" text="生成业务构件元数据"
+                description="生成业务构件元数据">
+            <add-to-group group-id="FileMenu" anchor="first"/>
+        </action>
         <action id="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" class="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" text="业务构件实体导入数据源配置"
                 description="业务构件实体导入数据源配置">
             <add-to-group group-id="FileMenu" anchor="first"/>

@@ -52,6 +52,22 @@ public class ComponentCreator {
         saveMetaData(component);
     }
 
+    public static boolean isAbcComponentProject(Project project){
+        String abcRootPath =project.getName()+File.separator+".abc";
+        File abcRoot = new File(abcRootPath);
+        if(!abcRoot.exists()){
+            return false;
+        }else{
+            String jsonPath =project.getName()+File.separator+".abc"+File.separator+project.getName()+".json";
+            File jsonFile = new File(abcRootPath);
+            if(jsonFile.exists()){
+                return true;
+            }else{
+                return false;
+            }
+        }
+    }
+
     public static void saveMetaData(ComponentDefinition component) throws Exception{
         StringBuilder fileName =getPackagePath(component)
                 .append(File.separator)
