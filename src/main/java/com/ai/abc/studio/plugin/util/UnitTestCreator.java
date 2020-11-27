@@ -83,10 +83,10 @@ public class UnitTestCreator {
         PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(apiServiceName,null);
         List<String> annotations = new ArrayList<>();
         annotations.add("@Autowired");
-        PsJavaFileHelper.addField(unitTestClass,apiServiceNameVar,null,apiType,annotations);
+        PsJavaFileHelper.addField(unitTestClass,apiServiceNameVar,null,apiType,annotations,null);
 
         PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("ObjectMapper",null);
-        PsJavaFileHelper.addField(unitTestClass,"mapper","new ObjectMapper()",mapperType,null);
+        PsJavaFileHelper.addField(unitTestClass,"mapper","new ObjectMapper()",mapperType,null,null);
 
         StringBuilder entityJsonPath = new StringBuilder().append("/").append(rootEntityName).append(".json");
         PsiMethod[] apiMethods = apiClass.getMethods();

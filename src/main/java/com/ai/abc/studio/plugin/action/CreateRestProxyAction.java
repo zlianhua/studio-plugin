@@ -82,7 +82,7 @@ public class CreateRestProxyAction extends AnAction {
                                     PsiType serviceType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName, null);
                                     List<String> serviceAutowire = new ArrayList<>();
                                     serviceAutowire.add("@Autowired");
-                                    PsJavaFileHelper.addField(controllerClass, serviceName, null,serviceType, serviceAutowire);
+                                    PsJavaFileHelper.addField(controllerClass, serviceName, null,serviceType, serviceAutowire,null);
                                 }
                                 RestControllerCreator.addMethodToControllerClass(project, rootEntitySimpleName, serviceName, controllerClass, methods, elementFactory, codeStyleManager, isGet);
                                 CodeStyleManager.getInstance(project).reformat(controllerClass);

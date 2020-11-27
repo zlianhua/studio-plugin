@@ -8,6 +8,7 @@ import com.ai.abc.jpa.model.EntityToJsonConverter;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.util.*;
 import com.ai.abc.studio.util.pdm.Column;
+import com.intellij.lang.java.JavaCommenter;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
@@ -48,6 +49,16 @@ public class EntityCreator {
         if(null==modelVirtualFile){
             createModelPath(component);
             modelVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(modelPath);
+        }
+        if(null==tableName){
+            tableName = StringUtils.capitalize(entityName);
+            tableName = CamelCaseStringUtil.camelCase2UnderScore(tableName);
+            String prefix = component.getTablePrefix();
+            if(null!=prefix && !prefix.endsWith("_")){
+                prefix+="_";
+            }
+            tableName=prefix+tableName;
+            tableName = tableName.toUpperCase();
         }
         List<String> packageImports = new ArrayList<>();
         packageImports.add("java.util");
@@ -110,7 +121,7 @@ public class EntityCreator {
             List<String> annotations = new ArrayList<>();
             annotations.add("@Column(name =\"DELETED\")");
             annotations.add("@Type(type=\"yes_no\")");
-            PsJavaFileHelper.addField(entityClass, "deleted", "false",fieldType, annotations);
+            PsJavaFileHelper.addField(entityClass, "deleted", "false",fieldType, annotations,"/**是否已删除*/");
         }
         PsiJavaFile file = (PsiJavaFile)entityClass.getContainingFile();
         JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
@@ -123,6 +134,7 @@ public class EntityCreator {
         if(component.isExtendsAbstractEntity()){
             abstractEntityFieldNames = ComponentCreator.getAbstractEntityFields();
         }
+        JavaCommenter commenter = new JavaCommenter();
         final List<String> ignoreFields = abstractEntityFieldNames;
         if (null != columns && !columns.isEmpty()) {
             for (Column column : columns) {
@@ -148,9 +160,16 @@ public class EntityCreator {
                 if (column.isClob()) {
                     annotations.add("@Lob");
                 }
-                field = PsJavaFileHelper.addField(psiClass, fieldName, null,fieldType, annotations);
-                PsiComment comment = elementFactory.createCommentFromText("/**" + null!=remarks&&!remarks.trim().equals("")?remarks:"请补充" + "*/", null);
-                psiClass.addBefore(comment, field);
+                String commentText = commenter.getBlockCommentPrefix();
+                if(null!=remarks&&!remarks.trim().equals("")){
+                    commentText+=remarks;
+                }else{
+                    commentText+="请补充";
+                }
+                commentText+=commenter.getBlockCommentSuffix();
+                field = PsJavaFileHelper.addField(psiClass, fieldName, null,fieldType, annotations,commentText);
+                PsiComment comment = elementFactory.createCommentFromText(commentText , null);
+                field.addBefore(comment,field.getFirstChild());
             }
             CodeStyleManager.getInstance(project).reformat(psiClass);
         }

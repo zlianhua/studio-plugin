@@ -96,7 +96,7 @@ public class NewSingleEntityAction extends AnAction {
                             String memFileName = CamelCaseStringUtil.camelCase2UnderScore(simpleEntityName);
                             annotations.add("@JoinColumn(name=\""+memFileName.toUpperCase()+"_ID\")");
                             PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
-                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
+                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations,null);
                             PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
                             PsiClass listClass = PsJavaFileHelper.findClass(project,"java.util.List");
                             PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
@@ -122,7 +122,7 @@ public class NewSingleEntityAction extends AnAction {
                                 imports.add(JsonBackImportStatement);
                             }
                             PsiType relFieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName,null);
-                            PsJavaFileHelper.addField(memberEntity,StringUtils.uncapitalize(mainFileName),null,relFieldType,relFieldAnnos);
+                            PsJavaFileHelper.addField(memberEntity,StringUtils.uncapitalize(mainFileName),null,relFieldType,relFieldAnnos,null);
                             new OpenFileDescriptor(project, memberEntityFile.getVirtualFile()).navigate(true);
                         } catch (Exception exception) {
                             Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"新建实体成员出现错误");

@@ -32,6 +32,8 @@ public class NewComponentAction extends AnAction {
             component.setLogicalDelete(componentDialog.getIsLogicalDeleteCheckBox().isSelected());
             component.setExtendsAbstractEntity(componentDialog.getIsExtendBaseEntityCheckBox().isSelected());
             component.setAuditable(componentDialog.getIsAuditableCheckBox().isSelected());
+            component.setTablePrefix(componentDialog.getTableNamePrefix().getText());
+            component.setInheritanceStrategy(ComponentDefinition.InheritanceStrategy.valueOf((String)componentDialog.getInheritanceStrategy().getSelectedItem()));
             DBConnectProp dbConnectProp = new DBConnectProp();
             dbConnectProp.setDbUrl(componentDialog.getDbUrlTextField().getText());
             dbConnectProp.setDbUserName(componentDialog.getDbUserTextField().getText());

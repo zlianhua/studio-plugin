@@ -52,7 +52,7 @@ public class PsJavaFileHelper {
         return field;
     }
 
-    public static PsiField addField(PsiClass psiClass, String fieldName, String initialValue, PsiType type, List<String> annotaions){
+    public static PsiField addField(PsiClass psiClass, String fieldName, String initialValue, PsiType type, List<String> annotaions,String comment){
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(psiClass.getProject());
         JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(psiClass.getProject());
         PsiField field = elementFactory.createField(fieldName, type);
@@ -65,6 +65,10 @@ public class PsJavaFileHelper {
         if (!StringUtils.isEmpty(initialValue) ){
             PsiExpression initialValueExpress = elementFactory.createExpressionFromText(initialValue,field);
             field.setInitializer(initialValueExpress);
+        }
+        if(null!=comment){
+            PsiComment aComment = elementFactory.createCommentFromText(comment,null);
+            field.addBefore(aComment,field.getFirstChild());
         }
         psiClass.add(field);
         return field;

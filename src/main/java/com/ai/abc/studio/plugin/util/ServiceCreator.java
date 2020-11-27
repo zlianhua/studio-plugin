@@ -122,7 +122,7 @@ public class ServiceCreator {
                 List<String> annotations = new ArrayList<>();
                 PsiType apiType = new PsiJavaParserFacadeImpl(project).createTypeFromText(rootEntityName+"Repository",null);
                 annotations.add("@Autowired");
-                PsJavaFileHelper.addField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository",null,apiType,annotations);
+                PsJavaFileHelper.addField(commandServiceCls,StringUtils.unCapitalize(rootEntityName)+"Repository",null,apiType,annotations,null);
             }
         }
         StringBuilder methodStr = new StringBuilder();

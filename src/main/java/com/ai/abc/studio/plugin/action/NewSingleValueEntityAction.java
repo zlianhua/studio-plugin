@@ -76,7 +76,7 @@ public class NewSingleValueEntityAction extends AnAction {
                             List<String> annotations = new ArrayList<>();
                             annotations.add("@Convert(converter = EntityToJsonConverter.class)");
                             annotations.add("@Lob");
-                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
+                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations,null);
                             PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity);
                             if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
                                 if (!valueEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {

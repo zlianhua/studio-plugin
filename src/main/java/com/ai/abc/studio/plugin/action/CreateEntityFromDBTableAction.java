@@ -59,6 +59,9 @@ public class CreateEntityFromDBTableAction extends AnAction {
                for(int selectedRow : selectedRows){
                    String tableName = (String) dialog.getDbTableTable().getValueAt(selectedRow, 1);
                    String prefix = component.getTablePrefix();
+                   if(null!=prefix && !prefix.endsWith("_")){
+                       prefix+="_";
+                   }
                    String tmpEntityName = tableName;
                    if(!StringUtils.isEmpty(prefix)){
                        tmpEntityName.substring(prefix.length()+1);

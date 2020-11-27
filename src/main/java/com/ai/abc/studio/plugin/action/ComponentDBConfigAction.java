@@ -40,6 +40,8 @@ public class ComponentDBConfigAction extends AnAction {
                 dbConnectProp.setDbUserName(componentDialog.getDbUserTextField().getText());
                 dbConnectProp.setDbPassword(componentDialog.getDbPasswordTextField().getText());
                 component.setDbConnectProp(dbConnectProp);
+                component.setTablePrefix(componentDialog.getTableNamePrefix().getText());
+                component.setInheritanceStrategy(ComponentDefinition.InheritanceStrategy.valueOf((String)componentDialog.getInheritanceStrategy().getSelectedItem()));
                 ComponentCreator.saveMetaData(component);
             }
         } catch (Exception exception) {

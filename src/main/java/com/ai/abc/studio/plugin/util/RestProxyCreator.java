@@ -59,17 +59,17 @@ public class RestProxyCreator {
         PsiType StringType = new PsiJavaParserFacadeImpl(project).createTypeFromText(String.class.getName(),null);
         List<String> annotations = new ArrayList<>();
         annotations.add("@Autowired");
-        PsJavaFileHelper.addField(restProxy,"baseUrl",null,StringType,annotations);
+        PsJavaFileHelper.addField(restProxy,"baseUrl",null,StringType,annotations,null);
 
         PsiType restTemplateType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.web.client.RestTemplate",null);
         annotations = new ArrayList<>();
-        PsJavaFileHelper.addField(restProxy,"restTemplate","new RestTemplate()",restTemplateType,annotations);
+        PsJavaFileHelper.addField(restProxy,"restTemplate","new RestTemplate()",restTemplateType,annotations,null);
 
         PsiType mapperType = new PsiJavaParserFacadeImpl(project).createTypeFromText("com.fasterxml.jackson.databind.ObjectMapper",null);
-        PsJavaFileHelper.addField(restProxy,"mapper","new ObjectMapper()",mapperType,annotations);
+        PsJavaFileHelper.addField(restProxy,"mapper","new ObjectMapper()",mapperType,annotations,null);
 
         PsiType headersType = new PsiJavaParserFacadeImpl(project).createTypeFromText("org.springframework.http.HttpHeaders",null);
-        PsJavaFileHelper.addField(restProxy,"headers","new HttpHeaders()",headersType,annotations);
+        PsJavaFileHelper.addField(restProxy,"headers","new HttpHeaders()",headersType,annotations,null);
 
         PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(restProxy.getContainingFile().getParent());
         PsiClass restConfigPsiClass = PsJavaFileHelper.getEntity(psiPackage,component.getSimpleName()+"RestConfiguration");
@@ -107,7 +107,7 @@ public class RestProxyCreator {
         PsiType StringType = new PsiJavaParserFacadeImpl(project).createTypeFromText(String.class.getName(),null);
         List<String> annotations = new ArrayList<>();
         annotations.add("@Value(\"${com.ai.bss.demo.baseurl}\")");
-        PsJavaFileHelper.addField(restConfig,"baseUrl",null,StringType,annotations);
+        PsJavaFileHelper.addField(restConfig,"baseUrl",null,StringType,annotations,null);
 
         //getBaseUrl method
         StringBuilder methodStr = new StringBuilder();
