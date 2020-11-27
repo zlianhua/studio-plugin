@@ -81,7 +81,6 @@ public class NewSingleEntityAction extends AnAction {
                     public void run() {
                         try {
                             PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
-//                        PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
                             JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
                             PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
                             String refFieldName = StringUtils.uncapitalize(simpleEntityName);
@@ -99,7 +98,8 @@ public class NewSingleEntityAction extends AnAction {
                             PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
                             PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
                             PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
-                            PsiClass listClass = JavaPsiFacade.getInstance(project).findClass("java.util.List", GlobalSearchScope.allScope(project));
+                            PsiClassType typeByName = PsiType.getTypeByName("java.util.List", project, GlobalSearchScope.allScope(project));
+                            PsiClass listClass = typeByName.resolve();
                             PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
                             file.getImportList().add(importStatement);
                             codeStyleManager.shortenClassReferences(file);
@@ -118,7 +118,9 @@ public class NewSingleEntityAction extends AnAction {
                             PsiJavaFile memberEntityFile = (PsiJavaFile)memberEntity.getContainingFile();
                             PsiImportList imports = memberEntityFile.getImportList();
                             if(null==imports.findSingleImportStatement(JsonBackReference.class.getName())){
-                                PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(JavaPsiFacade.getInstance(project).findClass(JsonBackReference.class.getName(),GlobalSearchScope.allScope(project)));
+                                PsiClassType jsonBackTypeByName = PsiType.getTypeByName(JsonBackReference.class.getName(), project, GlobalSearchScope.allScope(project));
+                                PsiClass jsonBackReferenceClass = jsonBackTypeByName.resolve();
+                                PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(jsonBackReferenceClass);
                                 imports.add(JsonBackImportStatement);
                             }
                             PsiType relFieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName,null);

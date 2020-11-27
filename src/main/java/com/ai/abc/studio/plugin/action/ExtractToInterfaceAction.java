@@ -50,7 +50,8 @@ public class ExtractToInterfaceAction extends AnAction {
             PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
             String mainFileName = psiFile.getName().replaceAll(".java", "");
             String mainClassName = EntityCreator.getEntityClassFullName(project, mainFileName).replace(".model.", ".service.");
-            PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(mainClassName, GlobalSearchScope.projectScope(project));
+            PsiClassType typeByName = PsiType.getTypeByName(mainClassName, project, GlobalSearchScope.allScope(project));
+            PsiClass mainPsiClass = typeByName.resolve();
             JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
             PsiMethod[] methods = mainPsiClass.getMethods();
             String intfaceName = mainFileName.replace("Impl", "");
@@ -60,7 +61,8 @@ public class ExtractToInterfaceAction extends AnAction {
                 @Override
                 public void run() {
                     try {
-                        PsiClass intfPsiClass = JavaPsiFacade.getInstance(project).findClass(interfaceClsName, GlobalSearchScope.projectScope(project));
+                        PsiClassType typeByName = PsiType.getTypeByName(interfaceClsName, project, GlobalSearchScope.allScope(project));
+                        PsiClass intfPsiClass = typeByName.resolve();
                         if (null == intfPsiClass) {
                             intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
                         }

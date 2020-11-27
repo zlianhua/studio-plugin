@@ -4,6 +4,7 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
 import com.ai.abc.studio.plugin.util.*;
 import com.ai.abc.studio.util.EntityUtil;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -63,7 +64,8 @@ public class NewSingleRootEntityAction extends AnAction {
                 ComponentDefinition component = ComponentCreator.loadComponent(project);
                 String packageName = EntityUtil.getComponentPackageName(component)+".model.";
                 String entitySimpleName = newSingleEntityDialog.getNameTextField().getText();
-                PsiClass mainPsiClass = JavaPsiFacade.getInstance(project).findClass(packageName+entitySimpleName, GlobalSearchScope.projectScope(project));
+                PsiClassType typeByName = PsiType.getTypeByName(packageName+entitySimpleName, project, GlobalSearchScope.allScope(project));
+                PsiClass mainPsiClass = typeByName.resolve();
                 if(null!=mainPsiClass){
                     JComponent source = PsJavaFileHelper.getDialogSource(e);
                     if (Messages.showConfirmationDialog(source,

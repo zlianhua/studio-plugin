@@ -15,7 +15,9 @@ import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.ProjectScope;
 import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
@@ -71,7 +73,8 @@ public class CreateRestProxyAction extends AnAction {
                         @Override
                         public void run() {
                             try {
-                                PsiClass controllerClass = JavaPsiFacade.getInstance(project).findClass(controllerClsName, GlobalSearchScope.projectScope(project));
+                                PsiClassType typeByName = PsiType.getTypeByName(controllerClsName, project, GlobalSearchScope.allScope(project));
+                                PsiClass controllerClass = typeByName.resolve();
                                 if (null == controllerClass) {
                                     controllerClass = RestControllerCreator.createRestController(project, component,component.getSimpleName()+"Controller");
                                 }
@@ -97,11 +100,13 @@ public class CreateRestProxyAction extends AnAction {
                         @Override
                         public void run() {
                             try {
-                                PsiClass proxyClass = JavaPsiFacade.getInstance(project).findClass(restProxyClsName, GlobalSearchScope.projectScope(project));
+                                PsiClassType typeByName = PsiType.getTypeByName(restProxyClsName, project, GlobalSearchScope.allScope(project));
+                                PsiClass proxyClass = typeByName.resolve();
                                 if(null==proxyClass){
                                     proxyClass = RestProxyCreator.createRestProxy(project,component,StringUtils.replace(mainFileName+"RestProxy","Impl",""));
                                 }else{
-                                    PsiClass restConfigPsiClass = PsJavaFileHelper.getEntity(psiPackage,component.getSimpleName()+"RestConfiguration");
+                                    PsiClassType restConfigTypeByName = PsiType.getTypeByName(restProxyClsName, project, GlobalSearchScope.allScope(project));
+                                    PsiClass restConfigPsiClass = restConfigTypeByName.resolve();
                                     if(null==restConfigPsiClass){
                                         RestProxyCreator.createRestConfig(project,component);
                                     }

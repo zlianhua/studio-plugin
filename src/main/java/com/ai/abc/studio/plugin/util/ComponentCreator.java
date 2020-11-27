@@ -393,7 +393,8 @@ public class ComponentCreator {
         }
         PsiClassType[] extendsList = psiClass.getExtendsListTypes();
         for(PsiClassType extendsType : extendsList){
-            PsiClass extendsClass = JavaPsiFacade.getInstance(project).findClass(extendsType.getCanonicalText(), GlobalSearchScope.allScope(project));
+            PsiClassType typeByName = PsiType.getTypeByName(extendsType.getCanonicalText(), project, GlobalSearchScope.allScope(project));
+            PsiClass extendsClass = typeByName.resolve();
             if(null!=extendsClass){
                 jsonObject = generatePsiClassJson(project,extendsClass,jsonObject);
             }
@@ -424,7 +425,8 @@ public class ComponentCreator {
                 }else if (fieldType.getCanonicalText().startsWith(List.class.getName())
                         || fieldType.getCanonicalText().equals(Set.class.getName())){
                     PsiType psiType1 = PsiUtil.extractIterableTypeParameter(fieldType, false);
-                    PsiClass fieldClass = JavaPsiFacade.getInstance(project).findClass(psiType1.getCanonicalText(), GlobalSearchScope.allScope(project));
+                    PsiClassType typeByName = PsiType.getTypeByName(psiType1.getCanonicalText(), project, GlobalSearchScope.allScope(project));
+                    PsiClass fieldClass = typeByName.resolve();
                     JSONArray array = new JSONArray();
                     if (null != fieldClass) {
                         JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
@@ -432,7 +434,8 @@ public class ComponentCreator {
                     }
                     jsonObject.put(field.getName(), array);
                 }else{
-                    PsiClass fieldClass = JavaPsiFacade.getInstance(project).findClass(fieldType.getCanonicalText(), GlobalSearchScope.allScope(project));
+                    PsiClassType typeByName = PsiType.getTypeByName(fieldType.getCanonicalText(), project, GlobalSearchScope.allScope(project));
+                    PsiClass fieldClass = typeByName.resolve();
                     if (null != fieldClass) {
                         JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
                         jsonObject.put(field.getName(), fieldJson);
