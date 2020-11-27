@@ -36,6 +36,8 @@ public class ComponentDialog extends DialogWrapper {
     private JTextField nameTextField = new JTextField("");
     private JTextField descTextField = new JTextField("");
     private JTextField versionTextField = new JTextField("1.0-SNAPSHOT");
+    private JTextField tableNamePrefix = new JTextField("");
+    private JComboBox<String> inheritanceStrategy;
     private JCheckBox isLogicalDeleteCheckBox = new JCheckBox("是否逻辑删除",true);
     private JCheckBox isExtendBaseEntityCheckBox = new JCheckBox("是否继承基础对象",true);
     private JCheckBox isAuditableCheckBox = new JCheckBox("是否生成审计（历史表）",true);
@@ -63,6 +65,8 @@ public class ComponentDialog extends DialogWrapper {
                 .addComponent(isLogicalDeleteCheckBox)
                 .addComponent(isExtendBaseEntityCheckBox)
                 .addComponent(isAuditableCheckBox)
+                .addLabeledComponent(new JLabel("表名前缀:"),tableNamePrefix,1,false)
+                .addLabeledComponent(new JLabel("继承策略:"),inheritanceStrategy,1,false)
                 .addLabeledComponent(new JLabel("数据连接URL:"), dbUrlTextField,1,false)
                 .addLabeledComponent(new JLabel("数据连接用户名:"), dbUserTextField,1,false)
                 .addLabeledComponent(new JLabel("数据连接密码:"), dbPasswordTextField,1,false)

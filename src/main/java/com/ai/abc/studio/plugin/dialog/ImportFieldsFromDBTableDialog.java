@@ -12,6 +12,7 @@ import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
+import org.thymeleaf.util.StringUtils;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -45,7 +46,9 @@ public class ImportFieldsFromDBTableDialog extends DialogWrapper {
     protected JComponent createCenterPanel() {
         DBConnectProp dbConnectProp =  component.getDbConnectProp();
         boolean dbConnectPropConfiged = false;
-        if(null==dbConnectProp){
+        if(null==dbConnectProp || StringUtils.isEmpty(dbConnectProp.getDbUrl())
+                || StringUtils.isEmpty(dbConnectProp.getDbUserName() )
+                || StringUtils.isEmpty(dbConnectProp.getDbPassword())){
             ComponentDBConfigDialog componentDialog = new ComponentDBConfigDialog();
             if (componentDialog.showAndGet()) {
                 try {

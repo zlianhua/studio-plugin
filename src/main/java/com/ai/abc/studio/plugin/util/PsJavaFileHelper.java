@@ -147,8 +147,7 @@ public class PsJavaFileHelper {
         }
         if (null!=classImports) {
             for(String classImport : classImports){
-                PsiClassType typeByName = PsiType.getTypeByName(classImport, project, GlobalSearchScope.allScope(project));
-                PsiClass aImportCls = typeByName.resolve();
+                PsiClass aImportCls = findClass(project,classImport);
                 if(null!=aImportCls){
                     PsiImportStatement importStatement = elementFactory.createImportStatement(aImportCls);
                     file.getImportList().add(importStatement);
@@ -182,8 +181,7 @@ public class PsJavaFileHelper {
         }
         if (null!=classImports) {
             for(String classImport : classImports){
-                PsiClassType typeByName = PsiType.getTypeByName(classImport, project, GlobalSearchScope.allScope(project));
-                PsiClass aImportCls = typeByName.resolve();
+                PsiClass aImportCls = findClass(project,classImport);
                 if(null!=aImportCls){
                     PsiImportStatement importStatement = elementFactory.createImportStatement(aImportCls);
                     file.getImportList().add(importStatement);
@@ -201,5 +199,25 @@ public class PsJavaFileHelper {
         JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
         codeStyleManager.shortenClassReferences(file);
         return psiClass;
+    }
+
+    public static PsiClass findClass(Project project,String className){
+        PsiClassType typeByName = PsiType.getTypeByName(className, project, GlobalSearchScope.allScope(project));
+        PsiClass aImportCls = typeByName.resolve();
+        if(null==aImportCls){
+            aImportCls = JavaPsiFacade.getInstance(project).findClass(className,GlobalSearchScope.allScope(project));
+        }
+        if(null==aImportCls){
+            try {
+                Thread.sleep(500);
+                aImportCls = JavaPsiFacade.getInstance(project).findClass(className,GlobalSearchScope.allScope(project));
+                if(null==aImportCls){
+                    aImportCls = typeByName.resolve();
+                }
+            } catch (InterruptedException e) {
+
+            }
+        }
+        return aImportCls;
     }
 }

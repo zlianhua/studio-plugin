@@ -73,8 +73,7 @@ public class CreateRestProxyAction extends AnAction {
                         @Override
                         public void run() {
                             try {
-                                PsiClassType typeByName = PsiType.getTypeByName(controllerClsName, project, GlobalSearchScope.allScope(project));
-                                PsiClass controllerClass = typeByName.resolve();
+                                PsiClass controllerClass = PsJavaFileHelper.findClass(project,controllerClsName);
                                 if (null == controllerClass) {
                                     controllerClass = RestControllerCreator.createRestController(project, component,component.getSimpleName()+"Controller");
                                 }
@@ -100,13 +99,11 @@ public class CreateRestProxyAction extends AnAction {
                         @Override
                         public void run() {
                             try {
-                                PsiClassType typeByName = PsiType.getTypeByName(restProxyClsName, project, GlobalSearchScope.allScope(project));
-                                PsiClass proxyClass = typeByName.resolve();
+                                PsiClass proxyClass = PsJavaFileHelper.findClass(project,restProxyClsName);
                                 if(null==proxyClass){
                                     proxyClass = RestProxyCreator.createRestProxy(project,component,StringUtils.replace(mainFileName+"RestProxy","Impl",""));
                                 }else{
-                                    PsiClassType restConfigTypeByName = PsiType.getTypeByName(restProxyClsName, project, GlobalSearchScope.allScope(project));
-                                    PsiClass restConfigPsiClass = restConfigTypeByName.resolve();
+                                    PsiClass restConfigPsiClass = PsJavaFileHelper.findClass(project,component.getSimpleName()+"RestConfiguration");
                                     if(null==restConfigPsiClass){
                                         RestProxyCreator.createRestConfig(project,component);
                                     }

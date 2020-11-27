@@ -151,8 +151,7 @@ public class RestControllerCreator {
         }
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();
         if(hasList){
-            PsiClassType typeByName = PsiType.getTypeByName(List.class.getName(), project, GlobalSearchScope.allScope(project));
-            PsiClass listClass = typeByName.resolve();
+            PsiClass listClass = PsJavaFileHelper.findClass(project,List.class.getName());
             PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
             file.getImportList().add(importStatement);
         }

@@ -149,8 +149,8 @@ public class EntityCreator {
                     annotations.add("@Lob");
                 }
                 field = PsJavaFileHelper.addField(psiClass, fieldName, null,fieldType, annotations);
-                PsiComment comment = elementFactory.createCommentFromText("/**" + remarks + "*/", null);
-                field.getModifierList().addBefore(comment, field.getModifierList().getFirstChild());
+                PsiComment comment = elementFactory.createCommentFromText("/**" + null!=remarks&&!remarks.trim().equals("")?remarks:"请补充" + "*/", null);
+                psiClass.addBefore(comment, field);
             }
             CodeStyleManager.getInstance(project).reformat(psiClass);
         }

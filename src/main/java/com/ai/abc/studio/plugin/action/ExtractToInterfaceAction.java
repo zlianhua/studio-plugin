@@ -4,6 +4,7 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.util.ComponentCreator;
 import com.ai.abc.studio.plugin.util.ApiClassCreator;
 import com.ai.abc.studio.plugin.util.EntityCreator;
+import com.ai.abc.studio.plugin.util.PsJavaFileHelper;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -50,8 +51,7 @@ public class ExtractToInterfaceAction extends AnAction {
             PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
             String mainFileName = psiFile.getName().replaceAll(".java", "");
             String mainClassName = EntityCreator.getEntityClassFullName(project, mainFileName).replace(".model.", ".service.");
-            PsiClassType typeByName = PsiType.getTypeByName(mainClassName, project, GlobalSearchScope.allScope(project));
-            PsiClass mainPsiClass = typeByName.resolve();
+            PsiClass mainPsiClass = PsJavaFileHelper.findClass(project,mainClassName);
             JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
             PsiMethod[] methods = mainPsiClass.getMethods();
             String intfaceName = mainFileName.replace("Impl", "");
@@ -61,8 +61,7 @@ public class ExtractToInterfaceAction extends AnAction {
                 @Override
                 public void run() {
                     try {
-                        PsiClassType typeByName = PsiType.getTypeByName(interfaceClsName, project, GlobalSearchScope.allScope(project));
-                        PsiClass intfPsiClass = typeByName.resolve();
+                        PsiClass intfPsiClass = PsJavaFileHelper.findClass(project,interfaceClsName);
                         if (null == intfPsiClass) {
                             intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
                         }

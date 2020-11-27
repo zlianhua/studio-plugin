@@ -393,8 +393,7 @@ public class ComponentCreator {
         }
         PsiClassType[] extendsList = psiClass.getExtendsListTypes();
         for(PsiClassType extendsType : extendsList){
-            PsiClassType typeByName = PsiType.getTypeByName(extendsType.getCanonicalText(), project, GlobalSearchScope.allScope(project));
-            PsiClass extendsClass = typeByName.resolve();
+            PsiClass extendsClass = PsJavaFileHelper.findClass(project,extendsType.getCanonicalText());
             if(null!=extendsClass){
                 jsonObject = generatePsiClassJson(project,extendsClass,jsonObject);
             }
@@ -425,8 +424,7 @@ public class ComponentCreator {
                 }else if (fieldType.getCanonicalText().startsWith(List.class.getName())
                         || fieldType.getCanonicalText().equals(Set.class.getName())){
                     PsiType psiType1 = PsiUtil.extractIterableTypeParameter(fieldType, false);
-                    PsiClassType typeByName = PsiType.getTypeByName(psiType1.getCanonicalText(), project, GlobalSearchScope.allScope(project));
-                    PsiClass fieldClass = typeByName.resolve();
+                    PsiClass fieldClass = PsJavaFileHelper.findClass(project,psiType1.getCanonicalText());
                     JSONArray array = new JSONArray();
                     if (null != fieldClass) {
                         JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
@@ -434,8 +432,7 @@ public class ComponentCreator {
                     }
                     jsonObject.put(field.getName(), array);
                 }else{
-                    PsiClassType typeByName = PsiType.getTypeByName(fieldType.getCanonicalText(), project, GlobalSearchScope.allScope(project));
-                    PsiClass fieldClass = typeByName.resolve();
+                    PsiClass fieldClass =  PsJavaFileHelper.findClass(project,fieldType.getCanonicalText());
                     if (null != fieldClass) {
                         JSONObject fieldJson = generatePsiClassJson(project, fieldClass, null);
                         jsonObject.put(field.getName(), fieldJson);

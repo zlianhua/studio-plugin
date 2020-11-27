@@ -64,8 +64,7 @@ public class NewSingleRootEntityAction extends AnAction {
                 ComponentDefinition component = ComponentCreator.loadComponent(project);
                 String packageName = EntityUtil.getComponentPackageName(component)+".model.";
                 String entitySimpleName = newSingleEntityDialog.getNameTextField().getText();
-                PsiClassType typeByName = PsiType.getTypeByName(packageName+entitySimpleName, project, GlobalSearchScope.allScope(project));
-                PsiClass mainPsiClass = typeByName.resolve();
+                PsiClass mainPsiClass = PsJavaFileHelper.findClass(project,packageName+entitySimpleName);
                 if(null!=mainPsiClass){
                     JComponent source = PsJavaFileHelper.getDialogSource(e);
                     if (Messages.showConfirmationDialog(source,

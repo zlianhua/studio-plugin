@@ -102,8 +102,7 @@ public class ServiceCreator {
         }
         if(!hasRootRepository){
             String repositoryPath = EntityUtil.getComponentPackageName(component)+".service.repository."+rootEntityName+"Repository";
-            PsiClassType typeByName = PsiType.getTypeByName(repositoryPath, project, GlobalSearchScope.allScope(project));
-            PsiClass repositoryCls = typeByName.resolve();
+            PsiClass repositoryCls = PsJavaFileHelper.findClass(project,repositoryPath);
             if(null==repositoryCls){
                 repositoryCls = RepositoryCreator.createRepository(project,component,rootEntityName,e);
             }
@@ -112,8 +111,7 @@ public class ServiceCreator {
             if(null==file.getImportList().findSingleImportStatement(rootEntityName+"Repository")){
                 file.getImportList().add(importStatement);
             }
-            PsiClassType autoWireTypeByName = PsiType.getTypeByName(repositoryPath, project, GlobalSearchScope.allScope(project));
-            PsiClass autoWired = autoWireTypeByName.resolve();
+            PsiClass autoWired = PsJavaFileHelper.findClass(project,repositoryPath);
             importStatement = elementFactory.createImportStatement(autoWired);
             if(null==file.getImportList().findSingleImportStatement("Autowired")){
                 file.getImportList().add(importStatement);

@@ -31,9 +31,9 @@ public class CreateEntityFromDBTableAction extends AnAction {
     public void update(@NotNull AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
         VirtualFile virtualFile = null;
-        try {
-            virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
-        } catch (Exception exception) {
+        virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
+
+        if(null==virtualFile){
             e.getPresentation().setEnabledAndVisible(false);
             return;
         }
@@ -58,7 +58,20 @@ public class CreateEntityFromDBTableAction extends AnAction {
                int[] selectedRows = dialog.getDbTableTable().getSelectedRows();
                for(int selectedRow : selectedRows){
                    String tableName = (String) dialog.getDbTableTable().getValueAt(selectedRow, 1);
-                   String entityName = StringUtils.capitalise(CamelCaseStringUtil.underScore2Camel(tableName,true));
+                   String prefix = component.getTablePrefix();
+                   String tmpEntityName = tableName;
+                   if(!StringUtils.isEmpty(prefix)){
+                       tmpEntityName.substring(prefix.length()+1);
+                   }
+                   tmpEntityName = StringUtils.capitalise(CamelCaseStringUtil.underScore2Camel(tmpEntityName,true));
+                   String entityName = tmpEntityName;
+                   boolean isRoot = (Boolean)dialog.getDbTableTable().getValueAt(selectedRow, 3);
+                   EntityCreator.EntityType entityType;
+                   if(isRoot){
+                       entityType = EntityCreator.EntityType.RootEntity;
+                   }else{
+                       entityType = null;
+                   }
                    DBConnectProp dbConnectProp = component.getDbConnectProp();
                    String dbUrl = dbConnectProp.getDbUrl();
                    String dbUserName = dbConnectProp.getDbUserName();
@@ -68,7 +81,7 @@ public class CreateEntityFromDBTableAction extends AnAction {
                        @Override
                        public void run() {
                            try {
-                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,null);
+                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType);
                                if(null!=columns && !columns.isEmpty()){
                                    EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
                                }

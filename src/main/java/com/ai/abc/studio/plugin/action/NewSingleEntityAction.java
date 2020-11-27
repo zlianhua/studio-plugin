@@ -98,8 +98,7 @@ public class NewSingleEntityAction extends AnAction {
                             PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
                             PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations);
                             PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
-                            PsiClassType typeByName = PsiType.getTypeByName("java.util.List", project, GlobalSearchScope.allScope(project));
-                            PsiClass listClass = typeByName.resolve();
+                            PsiClass listClass = PsJavaFileHelper.findClass(project,"java.util.List");
                             PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
                             file.getImportList().add(importStatement);
                             codeStyleManager.shortenClassReferences(file);
@@ -118,8 +117,7 @@ public class NewSingleEntityAction extends AnAction {
                             PsiJavaFile memberEntityFile = (PsiJavaFile)memberEntity.getContainingFile();
                             PsiImportList imports = memberEntityFile.getImportList();
                             if(null==imports.findSingleImportStatement(JsonBackReference.class.getName())){
-                                PsiClassType jsonBackTypeByName = PsiType.getTypeByName(JsonBackReference.class.getName(), project, GlobalSearchScope.allScope(project));
-                                PsiClass jsonBackReferenceClass = jsonBackTypeByName.resolve();
+                                PsiClass jsonBackReferenceClass = PsJavaFileHelper.findClass(project,JsonBackReference.class.getName());
                                 PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(jsonBackReferenceClass);
                                 imports.add(JsonBackImportStatement);
                             }

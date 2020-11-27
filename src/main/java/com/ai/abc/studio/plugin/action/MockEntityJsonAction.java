@@ -56,8 +56,7 @@ public class MockEntityJsonAction extends AnAction {
         try {
             String mainFileName = psiFile.getName().replaceAll(".java","");
             String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
-            PsiClassType typeByName = PsiType.getTypeByName(mainClassName, project, GlobalSearchScope.allScope(project));
-            PsiClass model = typeByName.resolve();
+            PsiClass model = PsJavaFileHelper.findClass(project,mainClassName);
             JSONObject jsonModel = ComponentCreator.generatePsiClassJson(project,model,null);
             EntityCreator.saveEntityMockedJson(ComponentCreator.loadComponent(project),model.getName(),jsonModel.toString());
         } catch (Exception ex) {
