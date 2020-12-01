@@ -32,7 +32,7 @@ public class ApiClassCreator {
         PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(PsiManager.getInstance(project).findDirectory(apiVirtualFile));
         PsiClass apiClass = PsJavaFileHelper.getEntity(psiPackage,className);
         if(null!=apiClass){
-            return null;
+            apiClass.delete();
         }
         List<String> packageImports = new ArrayList<>();
         packageImports.add(EntityUtil.getComponentPackageName(component)+".model");

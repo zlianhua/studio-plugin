@@ -62,9 +62,10 @@ public class ExtractToInterfaceAction extends AnAction {
                 public void run() {
                     try {
                         PsiClass intfPsiClass = PsJavaFileHelper.findClass(project,interfaceClsName);
-                        if (null == intfPsiClass) {
-                            intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
+                        if (null != intfPsiClass) {
+                            intfPsiClass.delete();
                         }
+                        intfPsiClass = ApiClassCreator.createApiClass(project, component, intfaceName);
                         ApiClassCreator.addMethodToInterfaceClass(intfPsiClass, methods, elementFactory, codeStyleManager);
                     } catch (Exception exception) {
                         Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"抽取方法到api出现错误");

@@ -4,7 +4,6 @@ import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.plugin.dialog.NewSingleEntityDialog;
 import com.ai.abc.studio.plugin.util.*;
 import com.ai.abc.studio.util.EntityUtil;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
@@ -15,26 +14,30 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.IdeFocusManager;
-import com.intellij.psi.*;
-import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.JavaDirectoryService;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiPackage;
 import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
  */
-public class NewSingleRootEntityAction extends AnAction {
+public class NewChildrenRootEntityAction extends AnAction {
     private Project project;
     @Override
     public void update(@NotNull AnActionEvent e) {
         project = e.getData(PlatformDataKeys.PROJECT);
         VirtualFile virtualFile = null;
+        boolean enable = false;
         try {
             virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
         } catch (Exception exception) {
-            e.getPresentation().setEnabledAndVisible(false);
+            e.getPresentation().setEnabledAndVisible(enable);
             return;
         }
         //获取当前类文件的路径
@@ -42,10 +45,19 @@ public class NewSingleRootEntityAction extends AnAction {
         String modelPackageStarts=project.getBasePath();
         String modelPackageEnds=project.getName().toLowerCase()+"/model";
         if((classPath.contains(modelPackageStarts))&&classPath.endsWith(modelPackageEnds)){
-            e.getPresentation().setEnabledAndVisible(true);
-        }else{
-            e.getPresentation().setEnabledAndVisible(false);
+            try {
+                PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
+                String mainFileName = psiFile.getName().replaceAll(".java","");
+                String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
+                PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+                PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
+                if(mainPsiClass.getModifierList().hasModifierProperty("abstract")){
+                    enable = true;
+                }
+            } catch (Exception exception) {
+            }
         }
+        e.getPresentation().setEnabledAndVisible(enable);
     }
 
     @Override
@@ -85,7 +97,9 @@ public class NewSingleRootEntityAction extends AnAction {
                             if(null==desc){
                                 desc = entitySimpleName;
                             }
-                            PsiClass rootEntity = EntityCreator.createEntity(project, component, entitySimpleName, "", EntityCreator.EntityType.RootEntity,desc,false,null);
+                            PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
+                            String superClass = psiFile.getName().replaceAll(".java","");
+                            PsiClass rootEntity = EntityCreator.createEntity(project, component, entitySimpleName, "", EntityCreator.EntityType.RootEntity,desc,false,superClass);
                             new OpenFileDescriptor(project, rootEntity.getContainingFile().getVirtualFile()).navigate(true);
                             RepositoryCreator.createRepository(project,component,entitySimpleName,e);
                             ApiClassCreator.createApiClasses(project,component,entitySimpleName);

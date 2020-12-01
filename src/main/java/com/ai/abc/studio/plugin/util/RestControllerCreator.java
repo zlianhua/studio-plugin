@@ -40,6 +40,7 @@ public class RestControllerCreator {
         packageImports.add("org.springframework.http");
         packageImports.add("org.springframework.beans.factory.annotation");
         packageImports.add("org.springframework.web.bind.annotation");
+        packageImports.add("io.swagger.annotations");
 
         List<String> classImports = new ArrayList<>();
         classImports.add(org.springframework.stereotype.Service.class.getName());
@@ -49,6 +50,12 @@ public class RestControllerCreator {
 
         List<String> classAnnotations = new ArrayList<>();
         classAnnotations.add("@Slf4j");
+        String desc = component.getDescription();
+        if(null==desc){
+            desc = component.getSimpleName();
+        }
+        desc+="Controller";
+        classAnnotations.add("@Api(value = \""+desc+"\")");
 
         PsiClass controller = PsJavaFileHelper.createPsiClass(project,apiVirtualFile,className,packageImports,classImports,classAnnotations,null);
         return controller;
@@ -147,6 +154,7 @@ public class RestControllerCreator {
             mappingAnnotation.append(")");
             restMethod.getModifierList().addAnnotation(mappingAnnotation.toString());
             restMethod.getModifierList().addAnnotation("ResponseBody");
+            restMethod.getModifierList().addAnnotation("ApiOperation(\""+method.getName()+"\")");
             psiClass.add(restMethod);
         }
         PsiJavaFile file = (PsiJavaFile)psiClass.getContainingFile();

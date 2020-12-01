@@ -22,6 +22,7 @@ import com.intellij.util.ExceptionUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.util.StringUtils;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 /**
@@ -74,9 +75,19 @@ public class CreateRestProxyAction extends AnAction {
                         public void run() {
                             try {
                                 PsiClass controllerClass = PsJavaFileHelper.findClass(project,controllerClsName);
-                                if (null == controllerClass) {
-                                    controllerClass = RestControllerCreator.createRestController(project, component,component.getSimpleName()+"Controller");
+                                if (null !=controllerClass) {
+                                    JComponent source = PsJavaFileHelper.getDialogSource(e);
+                                    if (Messages.showConfirmationDialog(source,
+                                            "Controller"+component.getSimpleName()+"已经存在，是否覆盖已有对象？",
+                                            "Controller"+"已经存在",
+                                            "覆盖",
+                                            "取消"
+                                    )==Messages.NO){
+                                        return;
+                                    }
+                                    controllerClass.delete();
                                 }
+                                controllerClass = RestControllerCreator.createRestController(project, component,component.getSimpleName()+"Controller");
                                 PsiField serviceField = PsJavaFileHelper.findField(controllerClass, serviceName);
                                 if (null == serviceField) {
                                     PsiType serviceType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName, null);

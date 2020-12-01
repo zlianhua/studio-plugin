@@ -37,7 +37,20 @@ public class NewSingleValueEntityAction extends AnAction {
         String modelPackageEnds=project.getName().toLowerCase()+"/model/";
         boolean enable = false;
         if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds)&&virtualFile.getFileType().getName().equalsIgnoreCase("java")){
-            enable =true;
+            try {
+                PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
+                String mainFileName = psiFile.getName().replaceAll(".java","");
+                String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
+                PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
+                PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
+                if(mainPsiClass.getModifierList().hasModifierProperty("abstract")){
+                    enable = false;
+                }else{
+                    enable = true;
+                }
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
         }
         e.getPresentation().setEnabledAndVisible(enable);
     }
@@ -77,7 +90,11 @@ public class NewSingleValueEntityAction extends AnAction {
                             annotations.add("@Convert(converter = EntityToJsonConverter.class)");
                             annotations.add("@Lob");
                             PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations,null);
-                            PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity);
+                            String desc = newSingleEntityDialog.getDescTextField().getText();
+                            if(null==desc){
+                                desc = simpleEntityName;
+                            }
+                            PsiClass valueEntity = EntityCreator.createEntity(project, component, simpleEntityName, "", EntityCreator.EntityType.ValueEntity,desc,false,null);
                             if (newSingleEntityDialog.getIsAbstractCheckBox().isSelected()) {
                                 if (!valueEntity.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
                                     valueEntity.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);

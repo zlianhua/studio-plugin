@@ -15,8 +15,11 @@ import lombok.Setter;
 import org.thymeleaf.util.StringUtils;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -29,6 +32,8 @@ import java.util.List;
 @Setter
 public class ImportFieldsFromDBTableDialog extends DialogWrapper {
     private JBTable dbTableTable =new JBTable();
+    JTextField searchText = new JTextField();
+    private TableRowSorter<TableModel> rowSorter;
     private ComponentDefinition component;
     public ImportFieldsFromDBTableDialog(ComponentDefinition component,String entityName) {
         super(true); // use current window as parent
@@ -107,11 +112,42 @@ public class ImportFieldsFromDBTableDialog extends DialogWrapper {
                             }
                         }
                     });
+                    rowSorter = new TableRowSorter<>(dbTableTable.getModel());
+                    dbTableTable.setRowSorter(rowSorter);
+                    searchText.getDocument().addDocumentListener(new DocumentListener(){
+                        @Override
+                        public void insertUpdate(DocumentEvent e) {
+                            String text = searchText.getText();
+
+                            if (text.trim().length() == 0) {
+                                rowSorter.setRowFilter(null);
+                            } else {
+                                rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+                            }
+                        }
+
+                        @Override
+                        public void removeUpdate(DocumentEvent e) {
+                            String text = searchText.getText();
+
+                            if (text.trim().length() == 0) {
+                                rowSorter.setRowFilter(null);
+                            } else {
+                                rowSorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+                            }
+                        }
+
+                        @Override
+                        public void changedUpdate(DocumentEvent e) {
+                            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                        }
+                    });
                 }
                 JTextPane textPanel = new JTextPane();
                 textPanel.setText("请选择合适的表");
                 dialogPanel = FormBuilder.createFormBuilder()
                         .addComponent(textPanel)
+                        .addLabeledComponent(new JLabel("请输入表名检索条件:"),searchText)
                         .addComponent(new JScrollPane((dbTableTable)))
                         .getPanel();
                 dialogPanel.setPreferredSize(new Dimension(450, 400));
@@ -133,10 +169,12 @@ public class ImportFieldsFromDBTableDialog extends DialogWrapper {
         Object[][] data = new Object[dataList.size()][3];
         int count=0;
         for(Table table : dataList){
-            data[count][0] = count+1;
-            data[count][1] = table.getTableName();
-            data[count][2] = table.getTableCode();
-            count++;
+            if(!table.getTableName().toLowerCase().endsWith("$seq")) {
+                data[count][0] = count + 1;
+                data[count][1] = table.getTableName();
+                data[count][2] = table.getTableCode();
+                count++;
+            }
         }
 
         final Class[] columnClass = new Class[] {

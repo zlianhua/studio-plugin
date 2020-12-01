@@ -3,8 +3,7 @@ package com.ai.abc.studio.plugin.action;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.dialog.CreateEntityFromDBTableDialog;
-import com.ai.abc.studio.plugin.util.ComponentCreator;
-import com.ai.abc.studio.plugin.util.EntityCreator;
+import com.ai.abc.studio.plugin.util.*;
 import com.ai.abc.studio.util.CamelCaseStringUtil;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Column;
@@ -84,9 +83,18 @@ public class CreateEntityFromDBTableAction extends AnAction {
                        @Override
                        public void run() {
                            try {
-                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType);
+                               String desc = (String) dialog.getDbTableTable().getValueAt(selectedRow, 2);
+                               if(null==desc){
+                                   desc = entityName;
+                               }
+                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType,desc,false,null);
                                if(null!=columns && !columns.isEmpty()){
                                    EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+                               }
+                               if(isRoot){
+                                   RepositoryCreator.createRepository(project,component,entityName,e);
+                                   ApiClassCreator.createApiClasses(project,component,entityName);
+                                   ServiceCreator.createService(project,component,entityName);
                                }
                            } catch (Exception exception) {
                                Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");

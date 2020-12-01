@@ -38,17 +38,7 @@ public class RepositoryCreator {
         PsiClass repositoryClass = null;
         PsiFile[] files = FilenameIndex.getFilesByName(project,rootEntityName+"Repository.java", ProjectScope.getProjectScope(project));
         if(null!=files && files.length>0) {
-            JComponent source = PsJavaFileHelper.getDialogSource(e);
-            if (Messages.showConfirmationDialog(source,
-                    rootEntityName + "Repository" + "已经存在，是否覆盖已有对象？",
-                    "Repository已经存在",
-                    "覆盖",
-                    "取消") == Messages.NO) {
-                return null;
-            }else{
-                //delete
-                files[0].delete();
-            }
+            files[0].delete();
         }
         List<String> packageImports = new ArrayList<>();
         packageImports.add(EntityUtil.getComponentPackageName(component)+".model");

@@ -172,7 +172,7 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
             @Override
             public boolean isCellEditable(int row, int column)
             {
-                return column==3;
+                return column==2||column==3;
             }
             @Override
             public Class<?> getColumnClass(int columnIndex)

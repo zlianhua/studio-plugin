@@ -42,7 +42,8 @@ public class EntityCreator {
         ValueEntity;
     }
 
-    public static PsiClass createEntity(Project project, ComponentDefinition component, String entityName,String tableName,EntityType entityType) throws Exception{
+    public static PsiClass createEntity(Project project, ComponentDefinition component, String entityName,
+                                        String tableName,EntityType entityType,String desc,boolean isAbstract,String parentClass) throws Exception{
         PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
         Path modelPath = Paths.get(project.getBasePath()+ File.separator+ ComponentCreator.getModelPath(component));
         VirtualFile modelVirtualFile = VirtualFileManager.getInstance().findFileByNioPath(modelPath);
@@ -65,6 +66,7 @@ public class EntityCreator {
         packageImports.add("com.ai.abc.api.model");
         packageImports.add("javax.persistence");
         packageImports.add("com.ai.abc.core.annotations");
+        packageImports.add("io.swagger.annotations");
 
         List<String> classImports = new ArrayList<>();
         if(component.isAuditable()){
@@ -84,38 +86,68 @@ public class EntityCreator {
         if(!StringUtils.isEmpty(tableName)){
             classAnnotations.add("@Table(name=\""+tableName.toUpperCase()+"\")");
         }
-        if(null!=entityType){
-            if(entityType.equals(EntityType.RootEntity)){
-                classAnnotations.add("@AiAbcRootEntity");
-                classAnnotations.add("@Entity");
-                classImports.add(AiAbcRootEntity.class.getName());
-            }else if (entityType.equals(EntityType.ValueEntity)){
-                classAnnotations.add("@AiAbcValueEntity");
-                classImports.add(AiAbcValueEntity.class.getName());
-            }else{
-                classAnnotations.add("@AiAbcMemberEntity");
-                classAnnotations.add("@Entity");
-                classImports.add(AiAbcMemberEntity.class.getName());
+        classAnnotations.add("@ApiModel(description = \""+desc+"\")");
+        ComponentDefinition.InheritanceStrategy inheritanceType = component.getInheritanceStrategy();
+        if(isAbstract){
+            classAnnotations.add("@MappedSuperclass");
+            classAnnotations.add("@Inheritance (strategy = InheritanceType."+inheritanceType.name()+")");
+            classImports.add(Timestamp.class.getName());
+            if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SINGLE_TABLE)
+            ||inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
+                classAnnotations.add("@DiscriminatorColumn(name=\"TYPE\",discriminatorType=DiscriminatorType.STRING)");
             }
-        }else{
-            if(entityName.equalsIgnoreCase(component.getSimpleName())){
-                classAnnotations.add("@AiAbcRootEntity");
-                classAnnotations.add("@Entity");
-                classImports.add(AiAbcRootEntity.class.getName());
-            }else{
-                classAnnotations.add("@AiAbcMemberEntity");
-                classAnnotations.add("@Entity");
-                classImports.add(AiAbcMemberEntity.class.getName());
+        }else {
+            if (null != entityType) {
+                if (entityType.equals(EntityType.RootEntity)) {
+                    classAnnotations.add("@AiAbcRootEntity");
+                    classAnnotations.add("@Entity");
+                    classImports.add(AiAbcRootEntity.class.getName());
+                } else if (entityType.equals(EntityType.ValueEntity)) {
+                    classAnnotations.add("@AiAbcValueEntity");
+                    classImports.add(AiAbcValueEntity.class.getName());
+                } else {
+                    classAnnotations.add("@AiAbcMemberEntity");
+                    classAnnotations.add("@Entity");
+                    classImports.add(AiAbcMemberEntity.class.getName());
+                }
+            } else {
+                if (entityName.equalsIgnoreCase(component.getSimpleName())) {
+                    classAnnotations.add("@AiAbcRootEntity");
+                    classAnnotations.add("@Entity");
+                    classImports.add(AiAbcRootEntity.class.getName());
+                } else {
+                    classAnnotations.add("@AiAbcMemberEntity");
+                    classAnnotations.add("@Entity");
+                    classImports.add(AiAbcMemberEntity.class.getName());
+                }
+            }
+            if(null!=parentClass && !entityType.equals(EntityType.ValueEntity)){
+                classAnnotations.add("@DiscriminatorValue(\"" + entityName + "\")");
+                if (inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
+                    classAnnotations.add("@SecondaryTable(name = \"" + tableName.toUpperCase() + "\",pkJoinColumns = @PrimaryKeyJoinColumn(name = \"请替换主键\")");
+                }
             }
         }
-        String parentClass = null;
-        if(component.isExtendsAbstractEntity()){
+        if(null==parentClass && component.isExtendsAbstractEntity()){
             parentClass = AbstractEntity.class.getName();
         }
+
         PsiClass entityClass = PsJavaFileHelper.createPsiClass(project,modelVirtualFile,entityName,packageImports,classImports,classAnnotations,parentClass);
+        if(isAbstract){
+            if (!entityClass.getModifierList().hasModifierProperty(PsiModifier.ABSTRACT)) {
+                entityClass.getModifierList().setModifierProperty(PsiModifier.ABSTRACT, true);
+            }
+        }
         if(null==entityClass.getExtendsList()){
             entityClass.getImplementsList().add(elementFactory.createReferenceFromText(Serializable.class.getName(),entityClass));
         }
+        //comment
+        JavaCommenter commenter = new JavaCommenter();
+        String commentText = commenter.getBlockCommentPrefix()+desc+commenter.getBlockCommentSuffix();
+        PsiComment comment = elementFactory.createCommentFromText(commentText , null);
+        entityClass.addBefore(comment,entityClass.getFirstChild());
+        //comment
+
         if(component.isLogicalDelete()){
             PsiType fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText("Boolean", null);
             List<String> annotations = new ArrayList<>();
@@ -161,11 +193,14 @@ public class EntityCreator {
                     annotations.add("@Lob");
                 }
                 String commentText = commenter.getBlockCommentPrefix();
+                String description = "";
                 if(null!=remarks&&!remarks.trim().equals("")){
-                    commentText+=remarks;
+                    description+=remarks;
                 }else{
-                    commentText+="请补充";
+                    description+=fieldName;
                 }
+                annotations.add("@ApiModelProperty(notes = \""+description+"\")");
+                commentText+=description;
                 commentText+=commenter.getBlockCommentSuffix();
                 field = PsJavaFileHelper.addField(psiClass, fieldName, null,fieldType, annotations,commentText);
                 PsiComment comment = elementFactory.createCommentFromText(commentText , null);
