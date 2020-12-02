@@ -16,7 +16,6 @@ import javax.swing.*;
 public class CreateRestProxyDialog extends DialogWrapper {
     private JCheckBox toRestControllerCheckBox = new JCheckBox("RestController",true);
     private JCheckBox toRestProxyCheckBox = new JCheckBox("RestProxy",true);
-    private JCheckBox toBmgProxyCheckBox = new JCheckBox("BmgProxy",false);
 
     public CreateRestProxyDialog() {
         super(true); // use current window as parent
@@ -30,7 +29,6 @@ public class CreateRestProxyDialog extends DialogWrapper {
         JPanel dialogPanel = FormBuilder.createFormBuilder()
                 .addComponent(toRestControllerCheckBox)
                 .addComponent(toRestProxyCheckBox)
-                .addComponent(toBmgProxyCheckBox)
                 .getPanel();
         return dialogPanel;
     }

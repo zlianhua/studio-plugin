@@ -156,7 +156,7 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
                     });
                 }
                 JTextPane textPanel = new JTextPane();
-                textPanel.setText("请勾选需要生成实体对象的表");
+                textPanel.setText("请选择需要生成实体对象的表");
                 dialogPanel = FormBuilder.createFormBuilder()
                         .addComponent(textPanel)
                         .addLabeledComponent(new JLabel("请输入表名检索条件:"),searchText)

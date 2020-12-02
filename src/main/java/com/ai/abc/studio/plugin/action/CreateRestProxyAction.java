@@ -128,15 +128,6 @@ public class CreateRestProxyAction extends AnAction {
                         }
                     });
                 }
-                if(dialog.getToBmgProxyCheckBox().isSelected()) {
-                    //TODO
-                    WriteCommandAction.runWriteCommandAction(project, new Runnable() {
-                        @Override
-                        public void run() {
-
-                        }
-                    });
-                }
             }
         } catch (Exception exception) {
             Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"创建RestProxy出现错误");

@@ -28,8 +28,8 @@
                 description="生成业务构件元数据">
             <add-to-group group-id="FileMenu" anchor="first"/>
         </action>
-        <action id="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" class="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" text="业务构件实体导入数据源配置"
-                description="业务构件实体导入数据源配置">
+        <action id="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" class="com.ai.abc.studio.plugin.action.ComponentDBConfigAction" text="业务构件属性配置"
+                description="业务构件属性配置">
             <add-to-group group-id="FileMenu" anchor="first"/>
         </action>
         <action id="com.ai.abc.studio.plugin.action.NewSingleRootEntityAction" class="com.ai.abc.studio.plugin.action.NewSingleRootEntityAction" text="根对象" description="新建根对象">
@@ -41,10 +41,10 @@
         <action id="com.ai.abc.studio.plugin.action.NewAbstractSubEntityAction" class="com.ai.abc.studio.plugin.action.NewAbstractSubEntityAction" text="抽象子对象" description="新建根抽象子对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
-        <action id="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" class="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" text="子类根对象" description="新建子类根对象">
+        <action id="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" class="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" text="子类根实体对象" description="新建子类根实体对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
-        <action id="com.ai.abc.studio.plugin.action.NewSubEntityAction" class="com.ai.abc.studio.plugin.action.NewSubEntityAction" text="子类成员对象" description="新建子类成员对象">
+        <action id="com.ai.abc.studio.plugin.action.NewSubEntityAction" class="com.ai.abc.studio.plugin.action.NewSubEntityAction" text="子类实体对象" description="新建子类实体对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
         <action id="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" class="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" text="从数据库表生成对象" description="从数据库表生成对象">
