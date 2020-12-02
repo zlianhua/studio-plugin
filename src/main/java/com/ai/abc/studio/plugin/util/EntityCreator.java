@@ -81,26 +81,33 @@ public class EntityCreator {
         classAnnotations.add("@Getter");
         classAnnotations.add("@Setter");
         classAnnotations.add("@NoArgsConstructor");
-        classAnnotations.add("@ApiModel(description = \""+desc+"\")");
+        if(StringUtils.isEmpty(desc)){
+            desc = entityName;
+        }
+        if(!isAbstract) {
+            classAnnotations.add("@ApiModel(description = \"" + desc + "\")");
+        }
         ComponentDefinition.InheritanceStrategy inheritanceType = component.getInheritanceStrategy();
         String inheritanceTypeName = inheritanceType.name();
         if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
             inheritanceTypeName = ComponentDefinition.InheritanceStrategy.SINGLE_TABLE.name();
         }
         if(isAbstract){
-            if(inheritanceTypeName.equals(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS.name())){
+            if(inheritanceTypeName.equals(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS.name())&&null!=parentClass){
                 classAnnotations.add("@MappedSuperclass");
             }else{
                 classAnnotations.add("@Entity");
-                if(!StringUtils.isEmpty(tableName)){
+                if(!StringUtils.isEmpty(tableName)&&null==parentClass){
                     classAnnotations.add("@Table(name=\""+tableName+"\")");
                 }
             }
-            classAnnotations.add("@Inheritance (strategy = InheritanceType."+inheritanceTypeName+")");
-            classImports.add(Timestamp.class.getName());
-            if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SINGLE_TABLE)
-            ||inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
-                classAnnotations.add("@DiscriminatorColumn(name=\"TYPE\",discriminatorType=DiscriminatorType.STRING)");
+            if (null==parentClass){
+                if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SINGLE_TABLE)
+                        ||inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
+                    classAnnotations.add("@DiscriminatorColumn(name=\"TYPE\",discriminatorType=DiscriminatorType.STRING)");
+                }
+                classAnnotations.add("@Inheritance (strategy = InheritanceType."+inheritanceTypeName+")");
+                classImports.add(Timestamp.class.getName());
             }
         }else {
             if (null != entityType) {
@@ -133,7 +140,6 @@ public class EntityCreator {
                     classAnnotations.add("@SecondaryTable(name = \"" + tableName + "\",pkJoinColumns = @PrimaryKeyJoinColumn(name = \"请替换主键\"))");
                 }else if (inheritanceType.equals(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS)){
                     if(!StringUtils.isEmpty(tableName)){
-                        //TODO 判断是否有子对象，如果有子对象，则也不需要@Table
                         classAnnotations.add("@Table(name=\""+tableName+"\")");
                     }
                 }
@@ -401,9 +407,12 @@ public class EntityCreator {
                 }
             }
         }
-        PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType,desc,tableInfo.isAbstract(),parentClass);
-        if(null!=columns && !columns.isEmpty()){
-            EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+        PsiFile[] files = FilenameIndex.getFilesByName(project,entityName+".java", ProjectScope.getProjectScope(project));
+        if(null==files || files.length==0) {
+            PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType,desc,tableInfo.isAbstract(),parentClass);
+            if(null!=columns && !columns.isEmpty()){
+                EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+            }
         }
         if(isRoot){
             RepositoryCreator.createRepository(project,component,entityName,e);

@@ -231,6 +231,13 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
                         parentTableComboBox.removeItem(currentTableName);
                     }
                 }
+            }else if (column==5){
+                String currentTableName = (String) model.getValueAt(row,1);
+                String superName = (String) model.getValueAt(row,column);
+                if(null!=superName && superName.equalsIgnoreCase(currentTableName)){
+                    Messages.showErrorDialog("选择的抽象父类不能是该表本身！","请重新选择父类");
+                    dbTableTable.changeSelection(row,column,false, false);
+                }
             }
         });
         return model;

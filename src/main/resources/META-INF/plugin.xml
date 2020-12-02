@@ -38,10 +38,13 @@
         <action id="com.ai.abc.studio.plugin.action.NewAbstractEntityAction" class="com.ai.abc.studio.plugin.action.NewAbstractEntityAction" text="抽象父对象" description="新建根抽象父对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
-        <action id="com.ai.abc.studio.plugin.action.NewChildrenRootEntityAction" class="com.ai.abc.studio.plugin.action.NewChildrenRootEntityAction" text="子类根对象" description="新建子类根对象">
+        <action id="com.ai.abc.studio.plugin.action.NewAbstractSubEntityAction" class="com.ai.abc.studio.plugin.action.NewAbstractSubEntityAction" text="抽象子对象" description="新建根抽象子对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
-        <action id="com.ai.abc.studio.plugin.action.NewChildrenEntityAction" class="com.ai.abc.studio.plugin.action.NewChildrenEntityAction" text="子类成员对象" description="新建子类成员对象">
+        <action id="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" class="com.ai.abc.studio.plugin.action.NewSubRootEntityAction" text="子类根对象" description="新建子类根对象">
+            <add-to-group group-id="NewGroup" anchor="first" />
+        </action>
+        <action id="com.ai.abc.studio.plugin.action.NewSubEntityAction" class="com.ai.abc.studio.plugin.action.NewSubEntityAction" text="子类成员对象" description="新建子类成员对象">
             <add-to-group group-id="NewGroup" anchor="first" />
         </action>
         <action id="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" class="com.ai.abc.studio.plugin.action.CreateEntityFromDBTableAction" text="从数据库表生成对象" description="从数据库表生成对象">

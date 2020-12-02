@@ -27,7 +27,7 @@ import javax.swing.*;
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
  */
-public class NewChildrenRootEntityAction extends AnAction {
+public class NewSubRootEntityAction extends AnAction {
     private Project project;
     @Override
     public void update(@NotNull AnActionEvent e) {

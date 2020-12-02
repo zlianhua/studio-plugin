@@ -30,7 +30,7 @@ import java.util.List;
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
  */
-public class NewChildrenEntityAction extends AnAction {
+public class NewSubEntityAction extends AnAction {
     @Override
     public void update(@NotNull AnActionEvent e) {
         VirtualFile virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE);
@@ -72,49 +72,18 @@ public class NewChildrenEntityAction extends AnAction {
         newSingleEntityDialog.getIsValueCheckBox().setEnabled(false);
         newSingleEntityDialog.getIsValueCheckBox().setSelected(false);
         newSingleEntityDialog.getIsAbstractCheckBox().setEnabled(false);
-        newSingleEntityDialog.getIsOneToManyCheckBox().setEnabled(true);
-        newSingleEntityDialog.getIsOneToManyCheckBox().setSelected(true);
+        newSingleEntityDialog.getIsOneToManyCheckBox().setEnabled(false);
+        newSingleEntityDialog.getIsOneToManyCheckBox().setSelected(false);
         if (newSingleEntityDialog.showAndGet()) {
             String simpleEntityName = newSingleEntityDialog.getNameTextField().getText();
             try {
                 Project project = e.getData(PlatformDataKeys.PROJECT);
                 ComponentDefinition component = ComponentCreator.loadComponent(project);
                 PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
-                String mainFileName = psiFile.getName().replaceAll(".java","");
-                String mainClassName = EntityCreator.getEntityClassFullName(project,mainFileName).replaceAll(".java","");
-                PsiPackage psiPackage =  JavaDirectoryService.getInstance().getPackage(psiFile.getParent());
                 WriteCommandAction.runWriteCommandAction(project, new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            PsiClass mainPsiClass = PsJavaFileHelper.getEntity(psiPackage,mainClassName);
-                            JavaCodeStyleManager codeStyleManager = JavaCodeStyleManager.getInstance(project);
-                            PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
-                            String refFieldName = StringUtils.uncapitalize(simpleEntityName);
-                            PsiType fieldType;
-                            List<String> annotations = new ArrayList<>();
-                            if(newSingleEntityDialog.getIsOneToManyCheckBox().isSelected()){
-                                annotations.add("@OneToMany(cascade= CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)");
-                                refFieldName = refFieldName+"List";
-                                fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText("List<"+simpleEntityName+">",null);
-                            }else{
-                                fieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(simpleEntityName,null);
-                            }
-                            String memFileName = CamelCaseStringUtil.camelCase2UnderScore(simpleEntityName);
-                            annotations.add("@JoinColumn(name=\""+memFileName.toUpperCase()+"_ID\")");
-                            PsJavaFileHelper.deleteField(mainPsiClass,refFieldName);
-                            PsJavaFileHelper.addField(mainPsiClass,refFieldName,null,fieldType,annotations,null);
-                            PsiJavaFile file = (PsiJavaFile)mainPsiClass.getContainingFile();
-                            PsiClass listClass = PsJavaFileHelper.findClass(project,"java.util.List");
-                            PsiImportStatement importStatement = elementFactory.createImportStatement(listClass);
-                            file.getImportList().add(importStatement);
-                            codeStyleManager.shortenClassReferences(file);
-                            List<String> relFieldAnnos = new ArrayList<>();
-
-                            relFieldAnnos.add("@ManyToOne");
-                            String columnName = CamelCaseStringUtil.camelCase2UnderScore(mainFileName);
-                            relFieldAnnos.add("@JoinColumn(name =\""+columnName.toUpperCase()+"_ID\", insertable = false, updatable = false)");
-                            relFieldAnnos.add("@JsonBackReference");
                             String desc = newSingleEntityDialog.getDescTextField().getText();
                             if(null==desc){
                                 desc = simpleEntityName;
@@ -122,14 +91,6 @@ public class NewChildrenEntityAction extends AnAction {
                             String superClass = psiFile.getName().replaceAll(".java","");
                             PsiClass memberEntity = EntityCreator.createEntity(project,component,simpleEntityName,"", EntityCreator.EntityType.MemberEntity,desc,false,superClass);
                             PsiJavaFile memberEntityFile = (PsiJavaFile)memberEntity.getContainingFile();
-                            PsiImportList imports = memberEntityFile.getImportList();
-                            if(null==imports.findSingleImportStatement(JsonBackReference.class.getName())){
-                                PsiClass jsonBackReferenceClass = PsJavaFileHelper.findClass(project,JsonBackReference.class.getName());
-                                PsiImportStatement JsonBackImportStatement = elementFactory.createImportStatement(jsonBackReferenceClass);
-                                imports.add(JsonBackImportStatement);
-                            }
-                            PsiType relFieldType = new PsiJavaParserFacadeImpl(project).createTypeFromText(mainFileName,null);
-                            PsJavaFileHelper.addField(memberEntity,StringUtils.uncapitalize(mainFileName),null,relFieldType,relFieldAnnos,null);
                             new OpenFileDescriptor(project, memberEntityFile.getVirtualFile()).navigate(true);
                         } catch (Exception exception) {
                             Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"新建实体成员出现错误");
