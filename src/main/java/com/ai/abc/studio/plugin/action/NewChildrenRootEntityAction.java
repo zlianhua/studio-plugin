@@ -44,7 +44,7 @@ public class NewChildrenRootEntityAction extends AnAction {
         String classPath = virtualFile.getPath();
         String modelPackageStarts=project.getBasePath();
         String modelPackageEnds=project.getName().toLowerCase()+"/model";
-        if((classPath.contains(modelPackageStarts))&&classPath.endsWith(modelPackageEnds)){
+        if((classPath.contains(modelPackageStarts))&&classPath.contains(modelPackageEnds) && virtualFile.getFileType().getName().equalsIgnoreCase("java")){
             try {
                 PsiFile psiFile = CommonDataKeys.PSI_FILE.getData(e.getDataContext());
                 String mainFileName = psiFile.getName().replaceAll(".java","");

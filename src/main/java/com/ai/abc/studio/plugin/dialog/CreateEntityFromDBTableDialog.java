@@ -3,26 +3,31 @@ package com.ai.abc.studio.plugin.dialog;
 import com.ai.abc.studio.model.ComponentDefinition;
 import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.plugin.util.ComponentCreator;
+import com.ai.abc.studio.plugin.util.EntityCreator;
 import com.ai.abc.studio.util.DBMetaDataUtil;
 import com.ai.abc.studio.util.pdm.Table;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.ui.BooleanTableCellEditor;
 import com.intellij.ui.table.JBTable;
 import com.intellij.util.ExceptionUtil;
 import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.tomcat.util.ExceptionUtils;
+import org.jdesktop.swingx.JXComboBox;
+import org.jdesktop.swingx.JXTable;
 import org.thymeleaf.util.StringUtils;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
@@ -31,12 +36,34 @@ import java.util.List;
 @Getter
 @Setter
 public class CreateEntityFromDBTableDialog extends DialogWrapper {
-    private JBTable dbTableTable =new JBTable();
+    private List<String> abstractTableNames = new ArrayList<>();
+    private JComboBox<String> parentTableComboBox = new JXComboBox();
+    private JComboBox<String> entityTypeComboBox = new JXComboBox();
+    private JBTable dbTableTable =new JBTable(){
+        public TableCellEditor getCellEditor(int row, int column)
+        {
+            int modelColumn = convertColumnIndexToModel( column );
+            if (modelColumn == 5) {
+                DefaultCellEditor dce5 = new DefaultCellEditor(parentTableComboBox);
+                return dce5;
+            }else if(modelColumn == 3){
+                DefaultCellEditor dce3 = new DefaultCellEditor(entityTypeComboBox);
+                return dce3;
+            }else if(modelColumn == 4){
+                return new JXTable.BooleanEditor();
+            }else {
+                return super.getCellEditor(row, column);
+            }
+        }
+    };
     JTextField searchText = new JTextField();
     private ComponentDefinition component;
     private TableRowSorter<TableModel> rowSorter;
     public CreateEntityFromDBTableDialog(ComponentDefinition component) {
         super(true); // use current window as parent
+        entityTypeComboBox.addItem(EntityCreator.EntityType.RootEntity.name());
+        entityTypeComboBox.addItem(EntityCreator.EntityType.MemberEntity.name());
+        entityTypeComboBox.addItem(EntityCreator.EntityType.ValueEntity.name());
         this.component = component;
         init();
         String title = "选择数据库表生成实体对象";
@@ -91,11 +118,12 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
                     dbTableTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
                     dbTableTable.getTableHeader().setReorderingAllowed(true);
                     dbTableTable.setRowSelectionAllowed(true);
-                    dbTableTable.setRowSelectionInterval(0, 0);
-                    dbTableTable.getColumnModel().getColumn(0).setPreferredWidth(50);
-                    dbTableTable.getColumnModel().getColumn(1).setPreferredWidth(200);
-                    dbTableTable.getColumnModel().getColumn(2).setPreferredWidth(100);
-                    dbTableTable.getColumnModel().getColumn(3).setPreferredWidth(50);
+                    dbTableTable.getColumnModel().getColumn(0).setPreferredWidth(50);//序号
+                    dbTableTable.getColumnModel().getColumn(1).setPreferredWidth(150);//name
+                    dbTableTable.getColumnModel().getColumn(2).setPreferredWidth(100);//comments
+                    dbTableTable.getColumnModel().getColumn(3).setPreferredWidth(100);//entityType
+                    dbTableTable.getColumnModel().getColumn(4).setPreferredWidth(100);//isAbstract
+                    dbTableTable.getColumnModel().getColumn(5).setPreferredWidth(100);//parentTable
                     rowSorter = new TableRowSorter<>(dbTableTable.getModel());
                     dbTableTable.setRowSorter(rowSorter);
                     searchText.getDocument().addDocumentListener(new DocumentListener(){
@@ -134,7 +162,7 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
                         .addLabeledComponent(new JLabel("请输入表名检索条件:"),searchText)
                         .addComponent(new JScrollPane((dbTableTable)))
                         .getPanel();
-                dialogPanel.setPreferredSize(new Dimension(400, 400));
+                dialogPanel.setPreferredSize(new Dimension(650, 500));
             } catch (Exception e) {
                 Messages.showErrorDialog(ExceptionUtil.getMessage(e),"出错啦");
                 e.printStackTrace();
@@ -147,39 +175,64 @@ public class CreateEntityFromDBTableDialog extends DialogWrapper {
     private TableModel createTableModel(List<Table> dataList){
         //headers for the table
         String[] columns = new String[] {
-                "序号", "表名", "备注","是否根对象"
+                "序号", "表名", "备注","对象类型","是否抽象类","继承自父表"
         };
 
         //actual data for the table in a 2d array
-        Object[][] data = new Object[dataList.size()][4];
+        Object[][] data = new Object[dataList.size()][6];
         int count=0;
         for(Table table : dataList){
             String tableName = table.getTableName();
-            if(!tableName.toLowerCase().endsWith("$seq")){
+            if(!StringUtils.isEmpty(tableName)&&!tableName.toLowerCase().endsWith("$seq")){
                 data[count][0] = count+1;
                 data[count][1] = tableName;
                 data[count][2] = table.getTableCode();
-                data[count][3] = false;
+                data[count][3] = EntityCreator.EntityType.MemberEntity.name();
+                data[count][4] = false;
                 count++;
             }
         }
 
         final Class[] columnClass = new Class[] {
-                Integer.class, String.class, String.class, Boolean.class
+                Integer.class, String.class, String.class, String.class,boolean.class,String.class
         };
         //create table model with data
         DefaultTableModel model = new DefaultTableModel(data, columns) {
             @Override
             public boolean isCellEditable(int row, int column)
             {
-                return column==2||column==3;
+                String entityType =(String)getValueAt(row,3);
+                if(entityType.equals(EntityCreator.EntityType.ValueEntity.name())
+                        && (column==4 || column==5 )
+                ) return false;
+                return column>1;
             }
             @Override
             public Class<?> getColumnClass(int columnIndex)
             {
                 return columnClass[columnIndex];
             }
+
         };
+        model.addTableModelListener(e -> {
+            int row = e.getFirstRow();
+            int column = e.getColumn();
+            if(column==4){
+                boolean isAbstract = (boolean)model.getValueAt(row,column);
+                String currentTableName = (String) model.getValueAt(row,1);
+                if(isAbstract){
+                    if(!abstractTableNames.contains(currentTableName)){
+                        abstractTableNames.add(currentTableName);
+                        parentTableComboBox.addItem(currentTableName);
+                    }
+                }else{
+                    if(abstractTableNames.contains(currentTableName)){
+                        abstractTableNames.remove(currentTableName);
+                        parentTableComboBox.removeItem(currentTableName);
+                    }
+                }
+            }
+        });
         return model;
     }
 }

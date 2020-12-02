@@ -6,9 +6,11 @@ import com.ai.abc.core.annotations.AiAbcValueEntity;
 import com.ai.abc.jpa.model.AbstractEntity;
 import com.ai.abc.jpa.model.EntityToJsonConverter;
 import com.ai.abc.studio.model.ComponentDefinition;
+import com.ai.abc.studio.model.DBConnectProp;
 import com.ai.abc.studio.util.*;
 import com.ai.abc.studio.util.pdm.Column;
 import com.intellij.lang.java.JavaCommenter;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
@@ -16,6 +18,8 @@ import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.impl.PsiJavaParserFacadeImpl;
+import com.intellij.psi.search.FilenameIndex;
+import com.intellij.psi.search.ProjectScope;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -51,16 +55,10 @@ public class EntityCreator {
             createModelPath(component);
             modelVirtualFile = VirtualFileManager.getInstance().refreshAndFindFileByNioPath(modelPath);
         }
-        if(null==tableName){
-            tableName = StringUtils.capitalize(entityName);
-            tableName = CamelCaseStringUtil.camelCase2UnderScore(tableName);
-            String prefix = component.getTablePrefix();
-            if(null!=prefix && !prefix.endsWith("_")){
-                prefix+="_";
-            }
-            tableName=prefix+tableName;
-            tableName = tableName.toUpperCase();
+        if(StringUtils.isEmpty(tableName)){
+            tableName = getTableNameFromEntityName(component,entityName);
         }
+        tableName = tableName.toUpperCase();
         List<String> packageImports = new ArrayList<>();
         packageImports.add("java.util");
         packageImports.add("com.ai.abc.api.model");
@@ -83,14 +81,22 @@ public class EntityCreator {
         classAnnotations.add("@Getter");
         classAnnotations.add("@Setter");
         classAnnotations.add("@NoArgsConstructor");
-        if(!StringUtils.isEmpty(tableName)){
-            classAnnotations.add("@Table(name=\""+tableName.toUpperCase()+"\")");
-        }
         classAnnotations.add("@ApiModel(description = \""+desc+"\")");
         ComponentDefinition.InheritanceStrategy inheritanceType = component.getInheritanceStrategy();
+        String inheritanceTypeName = inheritanceType.name();
+        if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
+            inheritanceTypeName = ComponentDefinition.InheritanceStrategy.SINGLE_TABLE.name();
+        }
         if(isAbstract){
-            classAnnotations.add("@MappedSuperclass");
-            classAnnotations.add("@Inheritance (strategy = InheritanceType."+inheritanceType.name()+")");
+            if(inheritanceTypeName.equals(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS.name())){
+                classAnnotations.add("@MappedSuperclass");
+            }else{
+                classAnnotations.add("@Entity");
+                if(!StringUtils.isEmpty(tableName)){
+                    classAnnotations.add("@Table(name=\""+tableName+"\")");
+                }
+            }
+            classAnnotations.add("@Inheritance (strategy = InheritanceType."+inheritanceTypeName+")");
             classImports.add(Timestamp.class.getName());
             if(inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SINGLE_TABLE)
             ||inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
@@ -124,7 +130,16 @@ public class EntityCreator {
             if(null!=parentClass && !entityType.equals(EntityType.ValueEntity)){
                 classAnnotations.add("@DiscriminatorValue(\"" + entityName + "\")");
                 if (inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
-                    classAnnotations.add("@SecondaryTable(name = \"" + tableName.toUpperCase() + "\",pkJoinColumns = @PrimaryKeyJoinColumn(name = \"请替换主键\")");
+                    classAnnotations.add("@SecondaryTable(name = \"" + tableName + "\",pkJoinColumns = @PrimaryKeyJoinColumn(name = \"请替换主键\"))");
+                }else if (inheritanceType.equals(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS)){
+                    if(!StringUtils.isEmpty(tableName)){
+                        //TODO 判断是否有子对象，如果有子对象，则也不需要@Table
+                        classAnnotations.add("@Table(name=\""+tableName+"\")");
+                    }
+                }
+            }else{
+                if(!StringUtils.isEmpty(tableName) && !entityType.equals(EntityType.ValueEntity)){
+                    classAnnotations.add("@Table(name=\""+tableName+"\")");
                 }
             }
         }
@@ -166,6 +181,7 @@ public class EntityCreator {
         if(component.isExtendsAbstractEntity()){
             abstractEntityFieldNames = ComponentCreator.getAbstractEntityFields();
         }
+        String pkColumnName=null;
         JavaCommenter commenter = new JavaCommenter();
         final List<String> ignoreFields = abstractEntityFieldNames;
         if (null != columns && !columns.isEmpty()) {
@@ -184,10 +200,13 @@ public class EntityCreator {
                 String fieldJavaType = DBMetaDataUtil.columnDataTypeToJavaType(column.getType());
                 PsiType fieldType = new PsiJavaParserFacadeImpl(psiClass.getProject()).createTypeFromText(fieldJavaType, null);
                 List<String> annotations = new ArrayList<>();
-                annotations.add("@Column(name =\"" + columnName.toUpperCase() + "\")");
-                if (column.isPkFlag()) {
-                    annotations.add("@GeneratedValue(strategy = GenerationType.AUTO)");
-                    annotations.add("@Id");
+                if(!PsJavaFileHelper.isValueEntity(psiClass)) {
+                    annotations.add("@Column(name =\"" + columnName.toUpperCase() + "\")");
+                    if (column.isPkFlag()) {
+                        annotations.add("@GeneratedValue(strategy = GenerationType.AUTO)");
+                        annotations.add("@Id");
+                        pkColumnName = columnName.toUpperCase();
+                    }
                 }
                 if (column.isClob()) {
                     annotations.add("@Lob");
@@ -205,6 +224,21 @@ public class EntityCreator {
                 field = PsJavaFileHelper.addField(psiClass, fieldName, null,fieldType, annotations,commentText);
                 PsiComment comment = elementFactory.createCommentFromText(commentText , null);
                 field.addBefore(comment,field.getFirstChild());
+            }
+            if(StringUtils.isEmpty(pkColumnName)){
+                pkColumnName="请补充主键";
+            }
+            if(!PsJavaFileHelper.isValueEntity(psiClass)){
+                boolean isAbstract = psiClass.getModifierList().hasModifierProperty("abstract");
+                ComponentDefinition.InheritanceStrategy inheritanceType = component.getInheritanceStrategy();
+                if (!isAbstract && inheritanceType.equals(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE)){
+                    PsiAnnotation secondTable = psiClass.getModifierList().findAnnotation("javax.persistence.SecondaryTable");
+                    if(null!=secondTable){
+                        secondTable.delete();
+                    }
+                    String tableName = getTableNameFromEntityName(component,psiClass.getName());
+                    psiClass.getModifierList().addAnnotation("SecondaryTable(name = \"" + tableName + "\",pkJoinColumns = @PrimaryKeyJoinColumn(name = \""+pkColumnName+"\"))");
+                }
             }
             CodeStyleManager.getInstance(project).reformat(psiClass);
         }
@@ -314,5 +348,67 @@ public class EntityCreator {
             }
         }
         return rootEntities;
+    }
+
+    public static String getEntityNameFromTableName(ComponentDefinition component,String tableName){
+        String prefix = component.getTablePrefix();
+        if(null!=prefix && !prefix.endsWith("_")){
+            prefix+="_";
+        }
+        String tmpEntityName = tableName;
+        if(!StringUtils.isEmpty(prefix)){
+            tmpEntityName = tmpEntityName.substring(prefix.length());
+        }
+        return StringUtils.capitalize(CamelCaseStringUtil.underScore2Camel(tmpEntityName,true));
+    }
+
+    public static String getTableNameFromEntityName(ComponentDefinition component,String entityName){
+        String prefix = component.getTablePrefix();
+        if(null!=prefix && !prefix.endsWith("_")){
+            prefix+="_";
+        }
+        String tableName = CamelCaseStringUtil.camelCase2UnderScore(entityName);
+        if(!StringUtils.isEmpty(prefix)){
+            tableName=prefix+tableName;
+        }
+        return tableName.toUpperCase();
+    }
+
+    public static void createEntityFromTable(Project project, ComponentDefinition component, TableInfo tableInfo, AnActionEvent e) throws Exception{
+        String tableName = tableInfo.getTableName();
+        String entityName = EntityCreator.getEntityNameFromTableName(component,tableName);
+        String desc = tableInfo.getDesc();
+        if(null==desc){
+            desc = entityName;
+        }
+        EntityType entityType = EntityCreator.EntityType.valueOf(tableInfo.getEntityType());
+        boolean isRoot = entityType.equals(EntityCreator.EntityType.RootEntity);
+        DBConnectProp dbConnectProp = component.getDbConnectProp();
+        String dbUrl = dbConnectProp.getDbUrl();
+        String dbUserName = dbConnectProp.getDbUserName();
+        String dbPassword = dbConnectProp.getDbPassword();
+        List<Column> columns = DBMetaDataUtil.getTableColumns(dbUrl, dbUserName, dbPassword, tableName);
+
+        String parentClass = null;
+        if(null!=tableInfo.getParentTableInfo()){
+            String parentTableName = tableInfo.getParentTableInfo().getTableName();
+            if(!StringUtils.isEmpty(parentTableName)){
+                parentClass = EntityCreator.getEntityNameFromTableName(component,parentTableName);
+                String parentEntityName = getEntityNameFromTableName(component,parentTableName);
+                PsiFile[] files = FilenameIndex.getFilesByName(project,parentEntityName+".java", ProjectScope.getProjectScope(project));
+                if(null==files || files.length==0) {
+                    createEntityFromTable(project,component,tableInfo.getParentTableInfo(),e);
+                }
+            }
+        }
+        PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType,desc,tableInfo.isAbstract(),parentClass);
+        if(null!=columns && !columns.isEmpty()){
+            EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
+        }
+        if(isRoot){
+            RepositoryCreator.createRepository(project,component,entityName,e);
+            ApiClassCreator.createApiClasses(project,component,entityName);
+            ServiceCreator.createService(project,component,entityName);
+        }
     }
 }

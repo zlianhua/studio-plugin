@@ -16,11 +16,13 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
+import com.intellij.ui.table.JBTable;
 import com.intellij.util.ExceptionUtil;
-import org.codehaus.plexus.util.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.util.StringUtils;
 
-import java.util.List;
+import java.util.*;
+
 /**
  * @author Lianhua zhang zhanglh2@asiainfo.com
  * 2020.11
@@ -50,64 +52,73 @@ public class CreateEntityFromDBTableAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
+        Map<String,TableInfo> selectedTableInfoMap = new HashMap<>();
         try {
             ComponentDefinition component = ComponentCreator.loadComponent(project);
             CreateEntityFromDBTableDialog dialog = new CreateEntityFromDBTableDialog(component);
             if (dialog.showAndGet()) {
-               int[] selectedRows = dialog.getDbTableTable().getSelectedRows();
+                JBTable jbTable = dialog.getDbTableTable();
+               int[] selectedRows = jbTable.getSelectedRows();
+
                for(int selectedRow : selectedRows){
-                   String tableName = (String) dialog.getDbTableTable().getValueAt(selectedRow, 1);
-                   String prefix = component.getTablePrefix();
-                   if(null!=prefix && !prefix.endsWith("_")){
-                       prefix+="_";
+                   TableInfo tableInfo = new TableInfo();
+                   tableInfo.setTableName((String) jbTable.getValueAt(selectedRow, 1));
+                   tableInfo.setDesc((String)jbTable.getValueAt(selectedRow, 2));
+                   tableInfo.setEntityType((String)jbTable.getValueAt(selectedRow, 3));
+                   tableInfo.setAbstract((boolean)jbTable.getValueAt(selectedRow, 4));
+                   String parentTableName = (String)jbTable.getValueAt(selectedRow, 5);
+                   TableInfo parent = selectedTableInfoMap.get(parentTableName);
+                   if(null==parent){
+                       parent=createTableInfo(parentTableName,jbTable,selectedTableInfoMap);
+                       parent.getChildren().add(tableInfo.getTableName());
                    }
-                   String tmpEntityName = tableName;
-                   if(!StringUtils.isEmpty(prefix)){
-                       tmpEntityName.substring(prefix.length()+1);
-                   }
-                   tmpEntityName = StringUtils.capitalise(CamelCaseStringUtil.underScore2Camel(tmpEntityName,true));
-                   String entityName = tmpEntityName;
-                   boolean isRoot = (Boolean)dialog.getDbTableTable().getValueAt(selectedRow, 3);
-                   EntityCreator.EntityType entityType;
-                   if(isRoot){
-                       entityType = EntityCreator.EntityType.RootEntity;
-                   }else{
-                       entityType = null;
-                   }
-                   DBConnectProp dbConnectProp = component.getDbConnectProp();
-                   String dbUrl = dbConnectProp.getDbUrl();
-                   String dbUserName = dbConnectProp.getDbUserName();
-                   String dbPassword = dbConnectProp.getDbPassword();
-                   List<Column> columns = DBMetaDataUtil.getTableColumns(dbUrl, dbUserName, dbPassword, tableName);
-                   WriteCommandAction.runWriteCommandAction(project, new Runnable() {
-                       @Override
-                       public void run() {
-                           try {
-                               String desc = (String) dialog.getDbTableTable().getValueAt(selectedRow, 2);
-                               if(null==desc){
-                                   desc = entityName;
-                               }
-                               PsiClass psiClass = EntityCreator.createEntity(project, component,entityName,tableName,entityType,desc,false,null);
-                               if(null!=columns && !columns.isEmpty()){
-                                   EntityCreator.createPsiClassFieldsFromTableColumn(project,psiClass,columns,component);
-                               }
-                               if(isRoot){
-                                   RepositoryCreator.createRepository(project,component,entityName,e);
-                                   ApiClassCreator.createApiClasses(project,component,entityName);
-                                   ServiceCreator.createService(project,component,entityName);
-                               }
-                           } catch (Exception exception) {
-                               Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");
-                               exception.printStackTrace();
-                           }
-                       }
-                   });
+                   tableInfo.setParentTableInfo(parent);
+                   selectedTableInfoMap.put(tableInfo.getTableName(),tableInfo);
                }
+                WriteCommandAction.runWriteCommandAction(project, new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            for(TableInfo tableInfo : selectedTableInfoMap.values()){
+                                EntityCreator.createEntityFromTable(project,component,tableInfo,e);
+                            }
+                        } catch (Exception exception) {
+                            Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");
+                            exception.printStackTrace();
+                        }
+                    }
+                });
             }
         } catch (Exception exception) {
             Messages.showErrorDialog(ExceptionUtil.getMessage(exception),"从数据库导入实体出现错误");
             exception.printStackTrace();
         }
 
+    }
+
+    private TableInfo createTableInfo(String tableName, JBTable jbTable,Map<String,TableInfo> selectedTableInfoMap){
+        TableInfo tableInfo = null;
+        for(int selectedRow=jbTable.getModel().getRowCount()-1;selectedRow>=0;selectedRow--){
+            String rowTableName = (String)jbTable.getValueAt(selectedRow, 1);
+            if(null!=rowTableName && rowTableName.equalsIgnoreCase(tableName)){
+                tableInfo = new TableInfo();
+                tableInfo.setTableName((String) jbTable.getValueAt(selectedRow, 1));
+                tableInfo.setDesc((String)jbTable.getValueAt(selectedRow, 2));
+                tableInfo.setEntityType((String)jbTable.getValueAt(selectedRow, 3));
+                tableInfo.setAbstract((boolean)jbTable.getValueAt(selectedRow, 4));
+                String parentTableName = (String)jbTable.getValueAt(selectedRow, 5);
+                if(!StringUtils.isEmpty(parentTableName)){
+                    TableInfo parentTableInfo = selectedTableInfoMap.get(parentTableName);
+                    if(null==parentTableInfo){
+                        parentTableInfo = createTableInfo(parentTableName,jbTable,selectedTableInfoMap);
+                        parentTableInfo.getChildren().add(tableInfo.getTableName());
+                    }
+                    tableInfo.setParentTableInfo(parentTableInfo);
+                }
+                selectedTableInfoMap.put(tableInfo.getTableName(),tableInfo);
+                return tableInfo;
+            }
+        }
+        return tableInfo;
     }
 }
