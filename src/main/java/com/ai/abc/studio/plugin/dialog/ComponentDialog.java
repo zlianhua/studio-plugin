@@ -1,6 +1,7 @@
 package com.ai.abc.studio.plugin.dialog;
 
 
+import com.ai.abc.studio.model.ComponentDefinition;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.ui.DialogWrapper;
@@ -10,6 +11,7 @@ import com.intellij.util.ui.FormBuilder;
 import com.sun.istack.Nullable;
 import lombok.Getter;
 import lombok.Setter;
+import org.jdesktop.swingx.JXComboBox;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -48,6 +50,10 @@ public class ComponentDialog extends DialogWrapper {
 
     public ComponentDialog() {
         super(true); // use current window as parent
+        inheritanceStrategy = new JXComboBox();
+        inheritanceStrategy.addItem(ComponentDefinition.InheritanceStrategy.SINGLE_TABLE.name());
+        inheritanceStrategy.addItem(ComponentDefinition.InheritanceStrategy.SECONDARY_TABLE.name());
+        inheritanceStrategy.addItem(ComponentDefinition.InheritanceStrategy.TABLE_PER_CLASS.name());
         init();
         setTitle(null!= nameTextField.getText()? nameTextField.getText():""+"构件信息");
 
